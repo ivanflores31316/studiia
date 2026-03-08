@@ -243,11 +243,187 @@ label.field-label{display:block;font-size:11px;font-weight:700;color:var(--muted
 #logout-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:4px;
   border-radius:6px;transition:color .2s;font-family:'Sora',sans-serif;}
 #logout-btn:hover{color:var(--red);}
+
+/* ══════════════════════════════
+   RESPONSIVE / MOBILE
+══════════════════════════════ */
+
+/* Hamburger button — hidden on desktop */
+#menu-toggle{
+  display:none;position:fixed;top:14px;left:14px;z-index:1100;
+  width:42px;height:42px;border-radius:12px;
+  background:var(--surface);border:1px solid var(--border);
+  cursor:pointer;font-size:18px;align-items:center;justify-content:center;
+  box-shadow:0 4px 16px rgba(0,0,0,.4);transition:all .2s;
+}
+#menu-toggle:hover{background:var(--card);}
+
+/* Sidebar overlay backdrop */
+#sidebar-backdrop{
+  display:none;position:fixed;inset:0;z-index:1050;
+  background:rgba(0,0,0,.55);backdrop-filter:blur(2px);
+}
+
+/* Bottom nav bar for mobile */
+#bottom-nav{
+  display:none;position:fixed;bottom:0;left:0;right:0;z-index:1000;
+  background:var(--surface);border-top:1px solid var(--border);
+  padding:8px 4px calc(8px + env(safe-area-inset-bottom));
+  grid-template-columns:repeat(5,1fr);gap:2px;
+}
+.bnav-item{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:3px;padding:6px 2px;border-radius:10px;cursor:pointer;
+  font-size:9px;font-weight:700;color:var(--muted);transition:all .2s;border:none;
+  background:transparent;font-family:'Sora',sans-serif;
+}
+.bnav-item .bicon{font-size:20px;line-height:1;}
+.bnav-item.active{color:var(--accent-light);}
+.bnav-item:hover{color:var(--text);}
+
+/* More menu overlay */
+#more-menu{
+  display:none;position:fixed;bottom:72px;left:0;right:0;z-index:1099;
+  background:var(--surface);border-top:1px solid var(--border);
+  padding:12px 16px;border-radius:20px 20px 0 0;
+  box-shadow:0 -8px 32px rgba(0,0,0,.4);
+}
+#more-menu.open{display:block;}
+.more-menu-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+.more-item{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:12px 6px;border-radius:12px;cursor:pointer;
+  background:var(--card);border:1px solid var(--border);
+  font-size:10px;font-weight:700;color:var(--text);transition:all .2s;
+  border:none;font-family:'Sora',sans-serif;
+}
+.more-item .micon{font-size:22px;}
+.more-item:hover,.more-item.active{background:rgba(108,99,255,.15);color:var(--accent-light);}
+
+@media (max-width: 768px) {
+  /* Show mobile controls */
+  #menu-toggle{display:flex;}
+  #bottom-nav{display:grid;}
+
+  /* Sidebar becomes slide-in drawer */
+  #sidebar{
+    position:fixed;left:-240px;top:0;bottom:0;z-index:1060;
+    width:240px;height:100vh;
+    transition:left .28s cubic-bezier(.4,0,.2,1);
+    box-shadow:none;
+  }
+  #sidebar.open{
+    left:0;
+    box-shadow:8px 0 32px rgba(0,0,0,.5);
+  }
+  #sidebar-backdrop.open{display:block;}
+
+  /* Main gets top + bottom padding */
+  #main{padding:70px 16px 90px;}
+
+  /* Grids collapse */
+  .grid-4{grid-template-columns:1fr 1fr;}
+  .grid-2{grid-template-columns:1fr;}
+  .grid-cal{grid-template-columns:1fr;}
+
+  /* Auth box padding */
+  .auth-box{padding:28px 20px;margin:16px;}
+
+  /* Cards & sections adjust */
+  h1.page-title{font-size:19px;}
+  p.page-sub{font-size:12px;}
+
+  /* Flashcard study area */
+  #fc-study{max-width:100%;}
+
+  /* Hide sidebar streak box on mobile (shown in sidebar drawer) */
+  .streak-box{display:none;}
+
+  /* Exam / calc inner grids */
+  .ex-options-grid{grid-template-columns:1fr!important;}
+
+  /* Tareas chat panel */
+  #tareas-chat-panel{position:fixed!important;bottom:72px!important;left:0!important;right:0!important;
+    width:100%!important;max-height:60vh!important;border-radius:16px 16px 0 0!important;
+    z-index:990;}
+
+  /* Flashcard tab buttons wrap */
+  #section-tarjetas .flex.gap-8{flex-wrap:wrap;justify-content:flex-start;}
+
+  /* Full-width modals */
+  #tarea-modal > div{margin:16px!important;max-width:calc(100vw - 32px)!important;}
+}
+
+@media (max-width: 420px) {
+  .grid-4{grid-template-columns:1fr 1fr;}
+  #main{padding:66px 12px 86px;}
+  .auth-box{padding:22px 16px;}
+  .btn-primary,.btn-full{font-size:14px;padding:11px 16px;}
+  h1.page-title{font-size:17px;}
+}
+
+
+/* API Key modal */
+#apikey-modal{position:fixed;inset:0;z-index:9998;background:rgba(0,0,0,.7);
+  backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;}
+#apikey-modal.open{display:flex;}
+.apikey-box{background:var(--surface);border:1px solid var(--border);border-radius:20px;
+  padding:32px 28px;width:100%;max-width:440px;animation:popIn .3s ease both;}
+.apikey-box h2{font-size:18px;font-weight:800;margin-bottom:8px;}
+.apikey-box p{font-size:13px;color:var(--muted);line-height:1.6;margin-bottom:18px;}
+.apikey-box a{color:var(--accent-light);}
+.apikey-note{font-size:11px;color:var(--muted);margin-top:10px;text-align:center;}
+
 </style>
 </head>
 <body>
 
 <!-- ═══════════════ SIDEBAR ═══════════════ -->
+
+<!-- Mobile controls -->
+<button id="menu-toggle" onclick="toggleSidebar()">☰</button>
+<div id="sidebar-backdrop" onclick="closeSidebar()"></div>
+
+<!-- Bottom navigation bar -->
+<nav id="bottom-nav">
+  <button class="bnav-item active" id="bnav-dashboard" onclick="goTo('dashboard');setBottomNav('dashboard')">
+    <span class="bicon">⚡</span>Inicio
+  </button>
+  <button class="bnav-item" id="bnav-tarjetas" onclick="goTo('tarjetas');setBottomNav('tarjetas')">
+    <span class="bicon">🃏</span>Tarjetas
+  </button>
+  <button class="bnav-item" id="bnav-examen" onclick="goTo('examen');setBottomNav('examen')">
+    <span class="bicon">📝</span>Examen
+  </button>
+  <button class="bnav-item" id="bnav-apuntes" onclick="goTo('apuntes');setBottomNav('apuntes')">
+    <span class="bicon">📓</span>Apuntes
+  </button>
+  <button class="bnav-item" id="bnav-more" onclick="toggleMoreMenu()">
+    <span class="bicon">⋯</span>Más
+  </button>
+</nav>
+
+<!-- More menu (shows rest of sections) -->
+<div id="more-menu">
+  <div class="more-menu-grid">
+    <button class="more-item" onclick="goTo('calificaciones');closeMoreMenu();setBottomNav('calificaciones')">
+      <span class="micon">🎯</span>Calculadora
+    </button>
+    <button class="more-item" onclick="goTo('temporizador');closeMoreMenu();setBottomNav('temporizador')">
+      <span class="micon">⏱</span>Pomodoro
+    </button>
+    <button class="more-item" onclick="goTo('progreso');closeMoreMenu();setBottomNav('progreso')">
+      <span class="micon">📈</span>Progreso
+    </button>
+    <button class="more-item" onclick="goTo('extraordinario');closeMoreMenu();setBottomNav('extraordinario')">
+      <span class="micon">🚨</span>Extraord.
+    </button>
+    <button class="more-item" onclick="goTo('tareas');closeMoreMenu();setBottomNav('tareas')">
+      <span class="micon">📋</span>Tareas
+    </button>
+  </div>
+</div>
+
 <div id="sidebar">
   <div class="logo">
     <h2><span>Study</span>AI</h2>
@@ -272,8 +448,8 @@ label.field-label{display:block;font-size:11px;font-weight:700;color:var(--muted
   </div>
   <div class="streak-box">
     <div class="label">🔥 RACHA ACTUAL</div>
-    <div class="value">7 días</div>
-    <div class="sub">¡Sigue así!</div>
+    <div class="value" id="sidebar-racha">0 días</div>
+    <div class="sub" id="sidebar-racha-sub">¡Empieza hoy!</div>
   </div>
 </div>
 
@@ -288,29 +464,29 @@ label.field-label{display:block;font-size:11px;font-weight:700;color:var(--muted
     <div class="card" style="position:relative;overflow:hidden;">
       <div style="position:absolute;right:12px;top:12px;font-size:22px;opacity:.1;">🃏</div>
       <div class="fs-11 color-muted fw-700" style="text-transform:uppercase;letter-spacing:.5px;">Tarjetas estudiadas</div>
-      <div style="font-size:26px;font-weight:800;color:var(--accent);margin-top:6px;">24</div>
+      <div id="dash-tarjetas" style="font-size:26px;font-weight:800;color:var(--accent);margin-top:6px;">0</div>
     </div>
     <div class="card" style="position:relative;overflow:hidden;">
       <div style="position:absolute;right:12px;top:12px;font-size:22px;opacity:.1;">✅</div>
       <div class="fs-11 color-muted fw-700" style="text-transform:uppercase;letter-spacing:.5px;">Respuestas correctas</div>
-      <div style="font-size:26px;font-weight:800;color:var(--green);margin-top:6px;">18/24</div>
+      <div id="dash-correctas" style="font-size:26px;font-weight:800;color:var(--green);margin-top:6px;">0/0</div>
     </div>
     <div class="card" style="position:relative;overflow:hidden;">
       <div style="position:absolute;right:12px;top:12px;font-size:22px;opacity:.1;">⚡</div>
       <div class="fs-11 color-muted fw-700" style="text-transform:uppercase;letter-spacing:.5px;">Racha de días</div>
-      <div style="font-size:26px;font-weight:800;color:var(--gold);margin-top:6px;">7 🔥</div>
+      <div id="dash-racha" style="font-size:26px;font-weight:800;color:var(--gold);margin-top:6px;">0 🔥</div>
     </div>
     <div class="card" style="position:relative;overflow:hidden;">
       <div style="position:absolute;right:12px;top:12px;font-size:22px;opacity:.1;">⏱</div>
       <div class="fs-11 color-muted fw-700" style="text-transform:uppercase;letter-spacing:.5px;">Minutos hoy</div>
-      <div style="font-size:26px;font-weight:800;color:var(--red);margin-top:6px;">145</div>
+      <div id="dash-minutos" style="font-size:26px;font-weight:800;color:var(--red);margin-top:6px;">0</div>
     </div>
   </div>
   <div class="fs-12 fw-700 color-muted mb-10" style="letter-spacing:.8px;text-transform:uppercase;">Acciones rápidas</div>
   <div class="grid-2">
     <div class="action-card" onclick="goTo('tarjetas')" onmouseover="this.style.borderColor='#6C63FF'" onmouseout="this.style.borderColor='var(--border)'">
       <div class="action-icon" style="background:rgba(108,99,255,.18);">🃏</div>
-      <div><div style="font-weight:700;font-size:14px;">Estudiar Flashcards</div><div class="fs-12 color-muted mt-4">5 tarjetas disponibles</div></div>
+      <div><div style="font-weight:700;font-size:14px;">Estudiar Flashcards</div><div class="fs-12 color-muted mt-4" id="dash-fc-count">0 tarjetas disponibles</div></div>
     </div>
     <div class="action-card" onclick="goTo('examen')" onmouseover="this.style.borderColor='#F5C542'" onmouseout="this.style.borderColor='var(--border)'">
       <div class="action-icon" style="background:rgba(245,197,66,.18);">📝</div>
@@ -944,14 +1120,25 @@ function _getClient() {
   return _supaClient;
 }
 
-// Generic DB helpers
+// Generic DB helpers — auto-inject user_id so each user sees only their data
+function _uid(){ return _authUser ? _authUser.id : null; }
+
 async function dbInsert(table, data) {
   const db = _getClient(); if (!db) return null;
-  try { const { data: d, error } = await db.from(table).insert(data).select(); if(error) throw error; return d; } catch(e) { console.warn('DB insert error:', e.message); return null; }
+  const uid = _uid();
+  const row = uid ? { ...data, user_id: uid } : data;
+  try { const { data: d, error } = await db.from(table).insert(row).select(); if(error) throw error; return d; } catch(e) { console.warn('DB insert error:', e.message); return null; }
 }
 async function dbSelect(table, filter) {
   const db = _getClient(); if (!db) return [];
-  try { let q = db.from(table).select('*'); if(filter) Object.entries(filter).forEach(([k,v])=>{ q=q.eq(k,v); }); const {data,error}=await q.order('created_at',{ascending:false}); if(error) throw error; return data||[]; } catch(e) { console.warn('DB select error:', e.message); return []; }
+  const uid = _uid();
+  try {
+    let q = db.from(table).select('*');
+    if(uid) q = q.eq('user_id', uid);
+    if(filter) Object.entries(filter).forEach(([k,v])=>{ q=q.eq(k,v); });
+    const {data,error}=await q.order('created_at',{ascending:false});
+    if(error) throw error; return data||[];
+  } catch(e) { console.warn('DB select error:', e.message); return []; }
 }
 async function dbUpdate(table, id, data) {
   const db = _getClient(); if (!db) return null;
@@ -972,6 +1159,7 @@ function goTo(id){
   if(sec){sec.classList.add('active');sec.classList.remove('animate');void sec.offsetWidth;sec.classList.add('animate');}
   document.querySelectorAll('[data-section="'+id+'"]').forEach(n=>n.classList.add('active'));
   if(id==='tareas') loadTareas();
+  if(id==='dashboard') loadDashboardStats();
 }
 document.querySelectorAll('.nav-item').forEach(n=>{
   n.addEventListener('click',()=>goTo(n.dataset.section));
@@ -1701,7 +1889,14 @@ function pomoToggle(){
       if(pomoSecs<=0){
         clearInterval(pomoTimer);pomoRunning=false;
         btn.textContent='▶ Iniciar';btn.style.background='var(--accent)';btn.style.animation='none';
-        if(pomoMode==='work'){pomoCycles++;document.getElementById('pomo-cycles').textContent=pomoCycles;document.getElementById('pomo-minutes').textContent=pomoCycles*25;}
+        if(pomoMode==='work'){
+          pomoCycles++;
+          document.getElementById('pomo-cycles').textContent=pomoCycles;
+          document.getElementById('pomo-minutes').textContent=pomoCycles*25;
+          const elMin=document.getElementById('dash-minutos');
+          if(elMin) elMin.textContent=pomoCycles*25;
+          dbInsert('sesiones_estudio',{tipo:'pomodoro',correctas:0,total:1,dia:new Date().toISOString().slice(0,10),tema:'pomodoro'});
+        }
         pomoSecs=0;
       }
       pomoUpdate();
@@ -1897,21 +2092,38 @@ Responde SOLO con JSON válido sin markdown:
 }
 
 // ── Anthropic API call ──
+let _apiKey = '';
+
+function getApiKey(){ return _apiKey; }
+
+function saveApiKey(){
+  const k = document.getElementById('apikey-input').value.trim();
+  if(!k){ alert('Por favor ingresa tu API Key de Gemini'); return; }
+  _apiKey = k;
+  closeApiKeyModal();
+}
+function openApiKeyModal(){ document.getElementById('apikey-modal').classList.add('open'); }
+function closeApiKeyModal(){ document.getElementById('apikey-modal').classList.remove('open'); }
+
 async function callAI(prompt){
-  const res=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({
-      model:'claude-sonnet-4-20250514',
-      max_tokens:1000,
-      messages:[{role:'user',content:prompt}]
+  if(!_apiKey){ openApiKeyModal(); throw new Error('API Key no configurada'); }
+  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + _apiKey;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { maxOutputTokens: 1500, temperature: 0.7 }
     })
   });
-  if(!res.ok)throw new Error('API error '+res.status);
-  const data=await res.json();
-  let text=(data.content||[]).map(b=>b.text||'').join('');
-  // Strip markdown code fences if present
-  text=text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+  if(!res.ok){
+    const err = await res.json().catch(()=>({}));
+    if(res.status === 400 || res.status === 403){ _apiKey=''; openApiKeyModal(); throw new Error('API Key inválida'); }
+    throw new Error('Error ' + res.status + ': ' + (err.error?.message || 'desconocido'));
+  }
+  const data = await res.json();
+  let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  text = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
   return text;
 }
 
@@ -2438,14 +2650,21 @@ Reglas:
 - Responde siempre en español.
 - Sé conciso pero completo.`;
     const messages=[{role:'user',content:systemPrompt+'\n\nPrimera pregunta del estudiante: '+chatHistory[0].content},...chatHistory.slice(1)];
-    const res=await fetch('https://api.anthropic.com/v1/messages',{
+    if(!_apiKey){ openApiKeyModal(); document.getElementById('chat-loader').style.display='none'; addChatBubble('ai','🔑 Configura tu API Key de Gemini para usar el chat.'); return; }
+    // Build Gemini conversation format
+    const geminiContents = messages.map(m => ({
+      role: m.role === 'assistant' ? 'model' : 'user',
+      parts: [{ text: m.content }]
+    }));
+    const chatUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + _apiKey;
+    const res=await fetch(chatUrl,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages})
+      body:JSON.stringify({ contents: geminiContents, generationConfig:{ maxOutputTokens:1000 } })
     });
-    if(!res.ok)throw new Error('API error');
+    if(!res.ok){ if(res.status===400||res.status===403){_apiKey='';openApiKeyModal();} throw new Error('API error '+res.status); }
     const data=await res.json();
-    const reply=(data.content||[]).map(b=>b.text||'').join('');
+    const reply=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
     chatHistory.push({role:'assistant',content:reply});
     document.getElementById('chat-loader').style.display='none';
     addChatBubble('ai',reply);
@@ -2584,6 +2803,23 @@ async function authLogout(){
   document.getElementById('login-btn').textContent = 'Entrar →';
 }
 
+function authClearLocalData(){
+  fcCards = [...FC_CARDS];
+  fcActiveCards = []; fcIdx = 0; fcScoreGood = 0; fcScoreBad = 0;
+  fcTopicProgress = {}; fcCurrentDay = 'all'; fcCurrentTopic = 'all';
+  notes = []; noteSelected = null;
+  tareas = []; tareaSelectedId = null; chatHistory = [];
+  // Reset dashboard counters
+  ['dash-tarjetas','dash-correctas','dash-racha','dash-minutos'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el) el.textContent = id === 'dash-correctas' ? '0/0' : id === 'dash-racha' ? '0 🔥' : '0';
+  });
+  const sr = document.getElementById('sidebar-racha');
+  if(sr) sr.textContent = '0 dias';
+  try { renderNotesList(); } catch(e){}
+  try { renderTareas(); } catch(e){}
+}
+
 function authOnLogin(user){
   _authUser = user;
   const name = (user.user_metadata && user.user_metadata.full_name) || user.email.split('@')[0];
@@ -2593,12 +2829,14 @@ function authOnLogin(user){
   document.getElementById('user-email').textContent   = user.email;
   document.getElementById('user-chip').style.display  = 'flex';
   document.getElementById('auth-overlay').classList.add('hidden');
-  // Greet in dashboard
   const titleEl = document.getElementById('dashboard-greeting');
-  if(titleEl) titleEl.textContent = 'Buenos días, ' + name.split(' ')[0] + ' 👋';
-  // Refresh data for this user
+  if(titleEl) titleEl.textContent = 'Buenos dias, ' + name.split(' ')[0] + ' ';
+  // Clear stale data then load this user's fresh data
+  authClearLocalData();
   fcInit();
   notesInit();
+  loadTareas();
+  setTimeout(loadDashboardStats, 800); // slight delay to let data load first
 }
 
 // Check for existing session when page loads
@@ -2620,6 +2858,117 @@ function authOnLogin(user){
     });
   } catch(e){ console.warn('Auth init error:', e.message); }
 })();
+
+
+/* ═══════════════════════════════
+   MOBILE NAV
+═══════════════════════════════ */
+function toggleSidebar(){
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebar-backdrop').classList.toggle('open');
+}
+function closeSidebar(){
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-backdrop').classList.remove('open');
+}
+function toggleMoreMenu(){
+  const m=document.getElementById('more-menu');
+  m.classList.toggle('open');
+}
+function closeMoreMenu(){
+  document.getElementById('more-menu').classList.remove('open');
+}
+function setBottomNav(id){
+  document.querySelectorAll('.bnav-item').forEach(b=>b.classList.remove('active'));
+  const el=document.getElementById('bnav-'+id);
+  if(el) el.classList.add('active');
+  else document.getElementById('bnav-more').classList.add('active');
+}
+
+// Close more menu when tapping outside
+document.addEventListener('click', function(e){
+  const mm=document.getElementById('more-menu');
+  if(mm.classList.contains('open') &&
+     !mm.contains(e.target) &&
+     !e.target.closest('#bnav-more')){
+    mm.classList.remove('open');
+  }
+});
+
+// Patch goTo to also close sidebar on mobile
+const _origGoTo = goTo;
+goTo = function(id){
+  _origGoTo(id);
+  closeSidebar();
+  closeMoreMenu();
+};
+
+
+/* ═══════════════════════════════
+   DASHBOARD STATS — live data
+═══════════════════════════════ */
+async function loadDashboardStats(){
+  // ── Flashcards estudiadas hoy ──
+  const sesiones = await dbSelect('sesiones_estudio');
+  const hoy = new Date().toISOString().slice(0,10);
+  const sesionesHoy = sesiones.filter(s => (s.created_at||'').slice(0,10) === hoy && s.tipo === 'flashcards');
+  const tarjetasHoy = sesionesHoy.reduce((acc, s) => acc + (s.total||0), 0);
+  const correctasHoy = sesionesHoy.reduce((acc, s) => acc + (s.correctas||0), 0);
+
+  // ── Minutos de pomodoro hoy (desde memoria, se acumula en sesión) ──
+  const minutosHoy = pomoCycles * 25;
+
+  // ── Racha de días ──
+  const streak = calcularRacha(sesiones);
+
+  // ── Total flashcards del usuario ──
+  const totalTarjetas = fcCards.length;
+
+  // ── Update DOM ──
+  const el = id => document.getElementById(id);
+  if(el('dash-tarjetas'))  el('dash-tarjetas').textContent  = tarjetasHoy;
+  if(el('dash-correctas')) el('dash-correctas').textContent = correctasHoy + '/' + tarjetasHoy;
+  if(el('dash-racha'))     el('dash-racha').textContent     = streak + ' 🔥';
+  if(el('dash-minutos'))   el('dash-minutos').textContent   = minutosHoy;
+  if(el('dash-fc-count'))  el('dash-fc-count').textContent  = totalTarjetas + ' tarjetas disponibles';
+  if(el('sidebar-racha'))  el('sidebar-racha').textContent  = streak + ' días';
+  if(el('sidebar-racha-sub')) el('sidebar-racha-sub').textContent = streak > 0 ? '¡Sigue así!' : '¡Empieza hoy!';
+}
+
+function calcularRacha(sesiones){
+  if(!sesiones || sesiones.length === 0) return 0;
+  // Get unique study days sorted descending
+  const dias = [...new Set(sesiones.map(s => (s.created_at||'').slice(0,10)))]
+    .filter(d => d)
+    .sort((a,b) => b.localeCompare(a));
+  if(!dias.length) return 0;
+  const hoy = new Date().toISOString().slice(0,10);
+  const ayer = new Date(Date.now() - 86400000).toISOString().slice(0,10);
+  // Streak must include today or yesterday to be active
+  if(dias[0] !== hoy && dias[0] !== ayer) return 0;
+  let streak = 1;
+  for(let i = 1; i < dias.length; i++){
+    const prev = new Date(dias[i-1]);
+    const curr = new Date(dias[i]);
+    const diff = Math.round((prev - curr) / 86400000);
+    if(diff === 1) streak++;
+    else break;
+  }
+  return streak;
+}
+
+// Also update dashboard minutos in real time when pomodoro finishes a cycle
+const _origPomoToggle = pomoToggle;
+pomoToggle = function(){
+  _origPomoToggle();
+};
+// Hook into pomodoro cycle completion
+const _origPomoUpdate = pomoUpdate;
+pomoUpdate = function(){
+  _origPomoUpdate();
+  const el = document.getElementById('dash-minutos');
+  if(el) el.textContent = pomoCycles * 25;
+};
 
 </script>
 
@@ -2680,5 +3029,21 @@ function authOnLogin(user){
     </div>
   </div>
 </div>
+
+<!-- API Key Modal -->
+<div id="apikey-modal">
+  <div class="apikey-box">
+    <h2>🔑 Ingresa tu API Key de Gemini</h2>
+    <p>Para usar las funciones de IA necesitas una API Key de Google Gemini. Es <strong>gratis</strong>, se obtiene en segundos y se guarda solo en tu sesión.</p>
+    <div class="auth-field">
+      <label>API Key de Google Gemini</label>
+      <input type="password" id="apikey-input" placeholder="AIza..." onkeydown="if(event.key==='Enter')saveApiKey()"/>
+    </div>
+    <button class="auth-btn" onclick="saveApiKey()">Guardar y continuar</button>
+    <button class="auth-btn" onclick="closeApiKeyModal()" style="background:var(--card);color:var(--muted);margin-top:8px;">Ahora no</button>
+    <p class="apikey-note">Obtén tu API Key gratis en <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a></p>
+  </div>
+</div>
+
 </body>
 </html>
