@@ -1,0 +1,2684 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>StudyAI — Tu compañero de estudio</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet"/>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#0D0F1A;--surface:#13162B;--card:#1A1E35;
+  --accent:#6C63FF;--accent-light:#8B85FF;--gold:#F5C542;
+  --green:#3DFFB0;--red:#FF5E7E;--text:#E8EAFF;
+  --muted:#6B7099;--border:#262A45;
+}
+body{font-family:'Sora',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;display:flex;}
+::-webkit-scrollbar{width:6px;}::-webkit-scrollbar-track{background:var(--bg);}::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(108,99,255,.4);}50%{box-shadow:0 0 0 8px rgba(108,99,255,0);}}
+@keyframes popIn{from{transform:scale(.88);opacity:0;}to{transform:scale(1);opacity:1;}}
+.animate{animation:fadeIn .35s ease both;}
+.pop{animation:popIn .28s cubic-bezier(.34,1.56,.64,1) both;}
+
+/* ── Layout ── */
+#sidebar{width:212px;background:var(--surface);border-right:1px solid var(--border);padding:22px 10px;display:flex;flex-direction:column;gap:2px;position:sticky;top:0;height:100vh;flex-shrink:0;overflow-y:auto;}
+#main{flex:1;overflow:auto;padding:32px;}
+.logo{padding:0 8px 18px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.logo h2{font-size:21px;font-weight:800;letter-spacing:-.5px;}
+.logo h2 span{color:var(--accent);}
+.logo p{font-size:11px;color:var(--muted);margin-top:2px;}
+.nav-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:12px;cursor:pointer;transition:all .2s;font-weight:600;font-size:13px;color:var(--muted);border:1px solid transparent;}
+.nav-item:hover{background:var(--card);color:var(--text);}
+.nav-item.active{background:linear-gradient(135deg,rgba(108,99,255,.13),rgba(108,99,255,.07));color:var(--accent-light);border-color:rgba(108,99,255,.27);}
+.nav-item .icon{font-size:14px;}
+.streak-box{margin-top:auto;padding:12px 8px;background:var(--card);border-radius:14px;border:1px solid var(--border);}
+.streak-box .label{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:4px;}
+.streak-box .value{font-size:26px;font-weight:800;color:var(--gold);}
+.streak-box .sub{font-size:11px;color:var(--muted);}
+
+/* ── Sections ── */
+.section{display:none;}.section.active{display:block;}
+h1.page-title{font-size:22px;font-weight:800;margin-bottom:6px;}
+p.page-sub{color:var(--muted);font-size:13px;margin-bottom:22px;}
+
+/* ── Cards / Surfaces ── */
+.card{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:20px;}
+.card-sm{background:var(--card);border-radius:13px;border:1px solid var(--border);padding:14px 17px;}
+
+/* ── Buttons ── */
+button,.btn{cursor:pointer;border:none;outline:none;font-family:'Sora',sans-serif;transition:all .2s;}
+button:hover,.btn:hover{transform:translateY(-2px);}
+button:active,.btn:active{transform:translateY(0);}
+.btn-primary{background:var(--accent);color:#fff;padding:12px 22px;border-radius:12px;font-weight:700;font-size:14px;}
+.btn-primary:hover{background:var(--accent-light);}
+.btn-ghost{background:var(--card);color:var(--muted);padding:8px 16px;border-radius:10px;font-weight:600;font-size:13px;border:1px solid var(--border);}
+.btn-ghost.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-danger{background:rgba(255,94,126,.18);color:var(--red);padding:8px 18px;border-radius:10px;font-weight:700;border:1px solid rgba(255,94,126,.3);}
+.btn-full{width:100%;padding:14px;border-radius:13px;font-weight:800;font-size:15px;}
+
+/* ── Inputs ── */
+input,textarea{background:var(--card);border:1.5px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;border-radius:10px;padding:9px 13px;width:100%;outline:none;transition:border .2s;font-size:13px;}
+input:focus,textarea:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:80px;}
+label.field-label{display:block;font-size:11px;font-weight:700;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px;}
+
+/* ── Tags ── */
+.tag{display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;}
+.tag-accent{background:rgba(108,99,255,.22);color:var(--accent-light);}
+.tag-gold{background:rgba(245,197,66,.18);color:var(--gold);}
+.tag-green{background:rgba(61,255,176,.15);color:var(--green);}
+.tag-red{background:rgba(255,94,126,.15);color:var(--red);}
+
+/* ── Grid helpers ── */
+.grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-cal{display:grid;grid-template-columns:1fr 320px;gap:22px;align-items:start;}
+.flex{display:flex;}.flex-col{flex-direction:column;}.gap-8{gap:8px;}.gap-10{gap:10px;}.gap-12{gap:12px;}.gap-14{gap:14px;}.gap-16{gap:16px;}.gap-20{gap:20px;}
+.items-center{align-items:center;}.justify-between{justify-content:space-between;}.justify-center{justify-content:center;}
+.mt-4{margin-top:4px;}.mt-6{margin-top:6px;}.mt-8{margin-top:8px;}.mt-10{margin-top:10px;}.mt-12{margin-top:12px;}.mt-14{margin-top:14px;}.mt-16{margin-top:16px;}.mt-20{margin-top:20px;}
+.mb-6{margin-bottom:6px;}.mb-10{margin-bottom:10px;}.mb-12{margin-bottom:12px;}.mb-14{margin-bottom:14px;}.mb-16{margin-bottom:16px;}.mb-20{margin-bottom:20px;}
+.text-center{text-align:center;}.text-right{text-align:right;}
+.fw-700{font-weight:700;}.fw-800{font-weight:800;}
+.fs-11{font-size:11px;}.fs-12{font-size:12px;}.fs-13{font-size:13px;}.fs-14{font-size:14px;}.fs-20{font-size:20px;}
+.color-muted{color:var(--muted);}
+.bar-track{background:var(--surface);height:7px;border-radius:4px;overflow:hidden;}
+.bar-fill{height:7px;border-radius:4px;transition:width .5s;}
+
+/* ── Dashboard action cards ── */
+.action-card{background:var(--card);border-radius:16px;padding:20px;border:1px solid var(--border);cursor:pointer;display:flex;gap:14px;align-items:center;transition:all .2s;}
+.action-card:hover{transform:translateY(-3px);}
+.action-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;}
+
+/* ── Flashcard option buttons ── */
+.opt-btn{width:100%;text-align:left;padding:13px 17px;border-radius:13px;border:2px solid var(--border);background:var(--card);color:var(--text);cursor:pointer;font-family:'Sora',sans-serif;font-size:14px;transition:all .2s;display:flex;align-items:center;gap:12px;line-height:1.4;}
+.opt-btn:not(:disabled):hover{border-color:rgba(108,99,255,.55);background:rgba(108,99,255,.08);transform:translateX(3px);}
+.opt-btn.correct{border-color:var(--green);background:rgba(61,255,176,.12);color:var(--green);font-weight:700;}
+.opt-btn.wrong{border-color:var(--red);background:rgba(255,94,126,.12);color:var(--red);}
+.opt-btn.dimmed{opacity:.35;}
+.opt-badge{width:27px;height:27px;border-radius:50%;background:rgba(38,42,69,.88);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;transition:all .3s;}
+
+/* ── Progress bar ── */
+#fc-progress-bar,#ex-progress-bar{background:var(--surface);height:5px;border-radius:3px;margin-bottom:20px;}
+#fc-progress-fill,#ex-progress-fill{background:var(--accent);height:5px;border-radius:3px;transition:width .4s;}
+
+/* ── Score badges ── */
+.score-good{background:rgba(61,255,176,.18);color:var(--green);padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;}
+.score-bad{background:rgba(255,94,126,.18);color:var(--red);padding:3px 12px;border-radius:20px;font-size:12px;font-weight:700;}
+
+/* ── Pomodoro ── */
+#pomo-ring{display:block;margin:0 auto 28px;}
+.pomo-timer{font-family:'Space Mono',monospace;font-size:44px;font-weight:700;letter-spacing:2px;}
+
+/* ── Calc table ── */
+.calc-row{display:grid;grid-template-columns:1fr 68px 95px 30px;gap:8px;align-items:center;padding:5px 4px;border-bottom:1px solid rgba(38,42,69,.4);}
+.calc-head{display:grid;grid-template-columns:1fr 68px 95px 30px;gap:8px;padding:0 4px 8px;border-bottom:1px solid var(--border);margin-bottom:4px;}
+.calc-head span{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;}
+.calc-input{padding:6px 7px;font-size:13px;text-align:center;width:100%;}
+.calc-name{padding:6px 8px;font-size:13px;background:transparent;border:none;color:var(--text);}
+.calc-name:focus{border:none;outline:none;}
+.del-btn{width:26px;height:26px;border-radius:7px;background:rgba(255,94,126,.15);color:var(--red);font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-weight:700;flex-shrink:0;}
+.add-btn{width:26px;height:26px;border-radius:7px;background:var(--accent);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;flex-shrink:0;}
+
+/* ── Notes ── */
+#notes-layout{display:grid;grid-template-columns:270px 1fr;gap:20px;height:calc(100vh - 90px);}
+.note-card{background:var(--card);border-radius:13px;padding:12px 15px;border:1.5px solid var(--border);cursor:pointer;transition:all .2s;}
+.color-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.color-swatch{width:17px;height:17px;border-radius:50%;cursor:pointer;flex-shrink:0;}
+#note-editor{background:var(--card);border-radius:18px;padding:26px;border:1px solid var(--border);display:flex;flex-direction:column;}
+#note-title-input{font-size:19px;font-weight:800;background:transparent;border:none;color:var(--text);padding:0;width:auto;font-family:'Sora',sans-serif;outline:none;}
+#note-body{flex:1;min-height:280px;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;font-size:14px;line-height:1.7;font-family:'Sora',sans-serif;color:var(--text);resize:none;}
+#note-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--muted);gap:10px;font-size:14px;}
+
+/* ── Achievements ── */
+.achievement{padding:14px;border-radius:13px;text-align:center;}
+.achievement.locked{background:var(--surface);border:1px solid var(--border);opacity:.5;}
+.achievement.unlocked{background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.35);}
+.achievement .ach-icon{font-size:26px;}
+.achievement .ach-title{font-size:12px;font-weight:700;margin-top:7px;}
+.achievement .ach-desc{font-size:10px;color:var(--muted);margin-top:3px;}
+
+/* ── Extraordinario ── */
+.ext-step{display:none;}.ext-step.active{display:block;}
+.ext-topic-chip{display:inline-flex;align-items:center;gap:6px;background:rgba(108,99,255,.15);border:1px solid rgba(108,99,255,.3);border-radius:20px;padding:5px 12px;font-size:13px;margin:4px;}
+.ext-topic-chip button{background:none;border:none;color:var(--red);cursor:pointer;font-size:15px;line-height:1;padding:0;margin:0;}
+.plan-day{background:var(--card);border-radius:14px;border:1px solid var(--border);margin-bottom:12px;overflow:hidden;}
+.plan-day-header{padding:12px 18px;display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;}
+.plan-day-header:hover{background:rgba(108,99,255,.07);}
+.plan-day-body{padding:0 18px 16px;display:none;}
+.plan-day-body.open{display:block;}
+.plan-task{display:flex;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid rgba(38,42,69,.4);}
+.plan-task:last-child{border-bottom:none;}
+.plan-task input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent);flex-shrink:0;margin-top:2px;cursor:pointer;}
+.plan-task.done label{text-decoration:line-through;color:var(--muted);}
+.plan-task label{font-size:13px;line-height:1.5;cursor:pointer;}
+.urgency-badge{font-size:11px;font-weight:700;padding:2px 9px;border-radius:10px;}
+.urgency-alta{background:rgba(255,94,126,.2);color:var(--red);}
+.urgency-media{background:rgba(245,197,66,.2);color:var(--gold);}
+.urgency-baja{background:rgba(61,255,176,.2);color:var(--green);}
+.ai-loader{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:14px;padding:24px 0;}
+.ai-spinner{width:22px;height:22px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.day-num{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;flex-shrink:0;}
+.day-tag{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;}
+.progress-ring-mini{transform:rotate(-90deg);}
+.ext-summary-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px;}
+
+/* ── Result section ── */
+#ex-result-pct{font-size:50px;font-weight:800;margin:10px 0;}
+.ex-result-row{background:var(--card);border-radius:13px;padding:13px 17px;margin-bottom:8px;}
+.review-correct{border:1px solid rgba(61,255,176,.35);}
+.review-wrong{border:1px solid rgba(255,94,126,.35);}
+
+/* ── TAREAS ── */
+.tarea-card{background:var(--card);border-radius:14px;border:1px solid var(--border);padding:16px 20px;margin-bottom:10px;transition:all .2s;}
+.tarea-card:hover{border-color:rgba(108,99,255,.3);}
+.tarea-card.done{opacity:.6;}
+.tarea-card.done .tarea-title{text-decoration:line-through;color:var(--muted);}
+.chat-bubble{padding:10px 14px;border-radius:12px;font-size:13px;line-height:1.6;max-width:88%;margin-bottom:8px;}
+.chat-user{background:rgba(108,99,255,.18);border:1px solid rgba(108,99,255,.25);align-self:flex-end;margin-left:auto;}
+.chat-ai{background:var(--card);border:1px solid var(--border);align-self:flex-start;}
+#chat-messages{display:flex;flex-direction:column;gap:4px;max-height:320px;overflow-y:auto;padding:10px 0;}
+.fc-day-badge{display:inline-flex;align-items:center;gap:4px;background:rgba(108,99,255,.15);border:1px solid rgba(108,99,255,.3);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:700;color:var(--accent-light);margin-bottom:12px;}
+.fc-progress-topic{padding:8px 14px;border-radius:10px;background:var(--surface);border:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-size:13px;margin-bottom:6px;}
+.sim-exam-header{background:linear-gradient(135deg,rgba(108,99,255,.12),rgba(61,255,176,.05));border:1px solid rgba(108,99,255,.25);border-radius:16px;padding:20px;margin-bottom:18px;}
+.ai-ready-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(61,255,176,.12);border:1px solid rgba(61,255,176,.3);border-radius:20px;padding:5px 14px;font-size:12px;font-weight:700;color:var(--green);}
+
+
+/* ══════════════════════════════
+   AUTH OVERLAY
+══════════════════════════════ */
+#auth-overlay{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Sora',sans-serif;
+}
+#auth-overlay.hidden{display:none;}
+.auth-box{
+  background:var(--surface);border:1px solid var(--border);
+  border-radius:24px;padding:40px 36px;width:100%;max-width:420px;
+  box-shadow:0 24px 80px rgba(0,0,0,.6);
+  animation:popIn .35s cubic-bezier(.34,1.56,.64,1) both;
+}
+.auth-logo{text-align:center;margin-bottom:28px;}
+.auth-logo h1{font-size:28px;font-weight:800;letter-spacing:-.5px;}
+.auth-logo h1 span{color:var(--accent);}
+.auth-logo p{font-size:13px;color:var(--muted);margin-top:4px;}
+.auth-tabs{display:flex;gap:6px;background:var(--bg);border-radius:12px;padding:5px;margin-bottom:26px;}
+.auth-tab{flex:1;padding:9px;border-radius:9px;font-weight:700;font-size:13px;
+  background:transparent;color:var(--muted);cursor:pointer;border:none;
+  font-family:'Sora',sans-serif;transition:all .2s;}
+.auth-tab.active{background:var(--accent);color:#fff;}
+.auth-field{margin-bottom:16px;}
+.auth-field label{display:block;font-size:11px;font-weight:700;color:var(--muted);
+  text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;}
+.auth-field input{background:var(--card);border:1.5px solid var(--border);color:var(--text);
+  font-family:'Sora',sans-serif;border-radius:11px;padding:11px 14px;
+  width:100%;outline:none;transition:border .2s;font-size:14px;}
+.auth-field input:focus{border-color:var(--accent);}
+.auth-btn{width:100%;padding:13px;border-radius:12px;font-weight:800;font-size:15px;
+  background:var(--accent);color:#fff;border:none;cursor:pointer;
+  font-family:'Sora',sans-serif;transition:all .2s;margin-top:6px;}
+.auth-btn:hover{background:var(--accent-light);transform:translateY(-2px);}
+.auth-btn:active{transform:translateY(0);}
+.auth-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.auth-msg{font-size:13px;text-align:center;margin-top:14px;padding:10px 14px;
+  border-radius:10px;display:none;}
+.auth-msg.error{background:rgba(255,94,126,.15);color:var(--red);display:block;border:1px solid rgba(255,94,126,.3);}
+.auth-msg.success{background:rgba(61,255,176,.12);color:var(--green);display:block;border:1px solid rgba(61,255,176,.25);}
+.auth-divider{text-align:center;color:var(--muted);font-size:12px;margin:16px 0;position:relative;}
+.auth-divider::before,.auth-divider::after{content:'';position:absolute;top:50%;width:38%;height:1px;background:var(--border);}
+.auth-divider::before{left:0;} .auth-divider::after{right:0;}
+#user-chip{padding:10px 12px;border-radius:12px;background:var(--card);border:1px solid var(--border);
+  display:none;align-items:center;gap:10px;margin-bottom:8px;}
+#user-chip .avatar{width:32px;height:32px;border-radius:50%;
+  background:linear-gradient(135deg,var(--accent),#9b7fff);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:800;font-size:14px;color:#fff;flex-shrink:0;}
+#user-chip .uinfo{flex:1;min-width:0;}
+#user-chip .uinfo .uname{font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#user-chip .uinfo .uemail{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+#logout-btn{background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px;padding:4px;
+  border-radius:6px;transition:color .2s;font-family:'Sora',sans-serif;}
+#logout-btn:hover{color:var(--red);}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<div id="sidebar">
+  <div class="logo">
+    <h2><span>Study</span>AI</h2>
+    <p>Tu compañero de estudio</p>
+  </div>
+  <div class="nav-item active" data-section="dashboard"><span class="icon">⚡</span>Inicio</div>
+  <div class="nav-item" data-section="tarjetas"><span class="icon">🃏</span>Flashcards</div>
+  <div class="nav-item" data-section="examen"><span class="icon">📝</span>Examen</div>
+  <div class="nav-item" data-section="calificaciones"><span class="icon">🎯</span>Calculadora</div>
+  <div class="nav-item" data-section="apuntes"><span class="icon">📓</span>Apuntes</div>
+  <div class="nav-item" data-section="temporizador"><span class="icon">⏱</span>Pomodoro</div>
+  <div class="nav-item" data-section="progreso"><span class="icon">📈</span>Progreso</div>
+  <div class="nav-item" data-section="extraordinario"><span class="icon">🚨</span>Extraordinario</div>
+  <div class="nav-item" data-section="tareas"><span class="icon">📋</span>Tareas</div>
+  <div id="user-chip">
+    <div class="avatar" id="user-avatar">?</div>
+    <div class="uinfo">
+      <div class="uname" id="user-name">Usuario</div>
+      <div class="uemail" id="user-email">correo</div>
+    </div>
+    <button id="logout-btn" onclick="authLogout()" title="Cerrar sesión">⏻</button>
+  </div>
+  <div class="streak-box">
+    <div class="label">🔥 RACHA ACTUAL</div>
+    <div class="value">7 días</div>
+    <div class="sub">¡Sigue así!</div>
+  </div>
+</div>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div id="main">
+
+<!-- ──────── DASHBOARD ──────── -->
+<div id="section-dashboard" class="section active animate">
+  <h1 class="page-title" id="dashboard-greeting">Buenos días, Estudiante 👋</h1>
+  <p class="page-sub">¿Listo para una nueva sesión de estudio?</p>
+  <div class="grid-4 mb-20">
+    <div class="card" style="position:relative;overflow:hidden;">
+      <div style="position:absolute;right:12px;top:12px;font-size:22px;opacity:.1;">🃏</div>
+      <div class="fs-11 color-muted fw-700" style="text-transform:uppercase;letter-spacing:.5px;">Tarjetas estudiadas</div>
+      <div style="font-size:26px;font-weight:800;color:var(--accent);margin-top:6px;">24</div>
+    </div>
+    <div class="card" style="position:relative;overflow:hidden;">
+      <div style="position:absolute;right:12px;top:12px;font-size:22px;opacity:.1;">✅</div>
+      <div class="fs-11 color-muted fw-700" style="text-transform:uppercase;letter-spacing:.5px;">Respuestas correctas</div>
+      <div style="font-size:26px;font-weight:800;color:var(--green);margin-top:6px;">18/24</div>
+    </div>
+    <div class="card" style="position:relative;overflow:hidden;">
+      <div style="position:absolute;right:12px;top:12px;font-size:22px;opacity:.1;">⚡</div>
+      <div class="fs-11 color-muted fw-700" style="text-transform:uppercase;letter-spacing:.5px;">Racha de días</div>
+      <div style="font-size:26px;font-weight:800;color:var(--gold);margin-top:6px;">7 🔥</div>
+    </div>
+    <div class="card" style="position:relative;overflow:hidden;">
+      <div style="position:absolute;right:12px;top:12px;font-size:22px;opacity:.1;">⏱</div>
+      <div class="fs-11 color-muted fw-700" style="text-transform:uppercase;letter-spacing:.5px;">Minutos hoy</div>
+      <div style="font-size:26px;font-weight:800;color:var(--red);margin-top:6px;">145</div>
+    </div>
+  </div>
+  <div class="fs-12 fw-700 color-muted mb-10" style="letter-spacing:.8px;text-transform:uppercase;">Acciones rápidas</div>
+  <div class="grid-2">
+    <div class="action-card" onclick="goTo('tarjetas')" onmouseover="this.style.borderColor='#6C63FF'" onmouseout="this.style.borderColor='var(--border)'">
+      <div class="action-icon" style="background:rgba(108,99,255,.18);">🃏</div>
+      <div><div style="font-weight:700;font-size:14px;">Estudiar Flashcards</div><div class="fs-12 color-muted mt-4">5 tarjetas disponibles</div></div>
+    </div>
+    <div class="action-card" onclick="goTo('examen')" onmouseover="this.style.borderColor='#F5C542'" onmouseout="this.style.borderColor='var(--border)'">
+      <div class="action-icon" style="background:rgba(245,197,66,.18);">📝</div>
+      <div><div style="font-weight:700;font-size:14px;">Hacer un Examen</div><div class="fs-12 color-muted mt-4">Pon a prueba tu conocimiento</div></div>
+    </div>
+    <div class="action-card" onclick="goTo('calificaciones')" onmouseover="this.style.borderColor='#3DFFB0'" onmouseout="this.style.borderColor='var(--border)'">
+      <div class="action-icon" style="background:rgba(61,255,176,.18);">🎯</div>
+      <div><div style="font-weight:700;font-size:14px;">Calculadora de Calificaciones</div><div class="fs-12 color-muted mt-4">¿Cuánto necesitas para acreditar?</div></div>
+    </div>
+    <div class="action-card" onclick="goTo('temporizador')" onmouseover="this.style.borderColor='#FF5E7E'" onmouseout="this.style.borderColor='var(--border)'">
+      <div class="action-icon" style="background:rgba(255,94,126,.18);">⏱</div>
+      <div><div style="font-weight:700;font-size:14px;">Sesión Pomodoro</div><div class="fs-12 color-muted mt-4">25 min de enfoque total</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────── FLASHCARDS ──────── -->
+<div id="section-tarjetas" class="section animate">
+  <div class="flex justify-between items-center mb-14">
+    <div>
+      <h1 class="page-title" style="margin-bottom:2px;">🃏 Flashcards</h1>
+      <p class="fs-13 color-muted" id="fc-subtitle">Cargando tarjetas...</p>
+    </div>
+    <div class="flex gap-8">
+      <button class="btn-ghost active" id="tab-study" onclick="fcTab('study')">Estudiar</button>
+      <button class="btn-ghost" id="tab-create" onclick="fcTab('create')">Crear</button>
+      <button class="btn-ghost" id="tab-aigen" onclick="fcTab('aigen')">✨ IA</button>
+      <button class="btn-ghost" id="tab-list" onclick="fcTab('list')">Lista</button>
+    </div>
+  </div>
+
+  <!-- Study mode -->
+  <div id="fc-study" style="max-width:580px;margin:0 auto;">
+    <!-- Day & Topic Selector -->
+    <div class="card mb-14" style="padding:14px 18px;">
+      <div class="flex gap-10 items-center flex-wrap">
+        <div style="flex:1;min-width:160px;">
+          <label class="field-label">Día de estudio</label>
+          <select id="fc-day-select" onchange="fcLoadByDay()" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;border-radius:10px;padding:8px 12px;width:100%;outline:none;font-size:13px;">
+            <option value="all">📚 Todos los días</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:160px;">
+          <label class="field-label">Tema</label>
+          <select id="fc-topic-select" onchange="fcLoadByTopic()" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;border-radius:10px;padding:8px 12px;width:100%;outline:none;font-size:13px;">
+            <option value="all">🏷 Todos los temas</option>
+          </select>
+        </div>
+        <div style="align-self:flex-end;">
+          <button class="btn-ghost" onclick="fcShuffleActive()" style="padding:9px 14px;">🔀 Mezclar</button>
+        </div>
+      </div>
+    </div>
+    <!-- Progress by topic -->
+    <div id="fc-topic-progress" class="mb-14" style="display:none;"></div>
+
+    <div class="flex justify-between items-center mb-12">
+      <div class="flex gap-8">
+        <span class="score-good" id="fc-score-good">✅ 0</span>
+        <span class="score-bad" id="fc-score-bad">❌ 0</span>
+      </div>
+      <span style="font-family:'Space Mono';color:var(--muted);font-size:12px;" id="fc-counter">0 / 0</span>
+    </div>
+    <div id="fc-progress-bar"><div id="fc-progress-fill" style="width:0%;"></div></div>
+    <div class="card text-center mb-16" style="padding:24px 24px 18px;">
+      <div class="flex gap-8 justify-center mb-10" style="flex-wrap:wrap;">
+        <span class="tag tag-accent" id="fc-tema" style="display:inline-block;">—</span>
+        <span class="fc-day-badge" id="fc-day-badge" style="display:none;">📅 Día 1</span>
+      </div>
+      <div style="font-size:19px;font-weight:700;line-height:1.5;" id="fc-question">Selecciona un día o tema para empezar</div>
+      <div class="fs-11 color-muted mt-10" id="fc-hint">👇 Elige la respuesta correcta</div>
+    </div>
+    <div id="fc-options" class="flex flex-col gap-10"></div>
+    <div id="fc-feedback" class="pop" style="display:none;margin-top:18px;padding:14px 18px;border-radius:14px;justify-content:space-between;align-items:center;">
+      <span id="fc-feedback-text" style="font-weight:700;font-size:14px;"></span>
+      <button class="btn-primary" style="padding:8px 18px;font-size:13px;" onclick="fcNext()">Siguiente →</button>
+    </div>
+    <!-- Session complete -->
+    <div id="fc-session-done" style="display:none;margin-top:16px;text-align:center;padding:24px;background:rgba(61,255,176,.07);border:1px solid rgba(61,255,176,.25);border-radius:16px;">
+      <div style="font-size:40px;">🎉</div>
+      <div style="font-weight:800;font-size:18px;margin:8px 0;">¡Sesión completada!</div>
+      <div class="fs-13 color-muted" id="fc-session-score"></div>
+      <div class="flex gap-10 justify-center mt-14">
+        <button class="btn-ghost" onclick="fcRestartSession()">🔄 Repetir</button>
+        <button class="btn-primary" onclick="fcNextDayPrompt()">📅 Siguiente día →</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Create mode -->
+  <div id="fc-create" style="display:none;max-width:520px;">
+    <div class="card" style="padding:26px;">
+      <div style="font-weight:700;font-size:15px;margin-bottom:4px;">Nueva Flashcard</div>
+      <p class="fs-13 color-muted mb-16">Agrega al menos una respuesta incorrecta para activar el modo quiz.</p>
+      <div class="flex flex-col gap-12">
+        <div><label class="field-label">Pregunta</label><textarea id="new-front" placeholder="¿Qué quieres preguntar?"></textarea></div>
+        <div><label class="field-label" style="color:var(--green);">✅ Respuesta Correcta</label><textarea id="new-correct" placeholder="La respuesta correcta..."></textarea></div>
+        <div><label class="field-label" style="color:var(--red);">❌ Respuesta Incorrecta 1 (requerida)</label><input id="new-wrong1" placeholder="Una respuesta incorrecta..."/></div>
+        <div><label class="field-label" style="color:var(--muted);">❌ Respuesta Incorrecta 2 (opcional)</label><input id="new-wrong2" placeholder="Otra respuesta incorrecta..."/></div>
+        <div><label class="field-label">Tema</label><input id="new-tema" placeholder="Ej: Biología, Cálculo..."/></div>
+        <div><label class="field-label">Día de estudio (opcional)</label><input type="number" id="new-dia" placeholder="Ej: 1, 2, 3..." min="1"/></div>
+        <button class="btn-primary btn-full" onclick="addCard()">+ Agregar tarjeta</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI Generate from notes -->
+  <div id="fc-aigen" style="display:none;max-width:640px;">
+    <div class="card" style="padding:26px;">
+      <div style="font-weight:700;font-size:16px;margin-bottom:6px;">✨ Generar Flashcards con IA</div>
+      <p class="fs-13 color-muted mb-16">La IA analizará tus apuntes guardados y generará flashcards automáticamente por tema y día.</p>
+      <div class="flex flex-col gap-14">
+        <div>
+          <label class="field-label">Materia / Contexto</label>
+          <input id="aigen-materia" placeholder="Ej: Biología, Cálculo Diferencial..."/>
+        </div>
+        <div>
+          <label class="field-label">Apuntes base (se cargará de tus notas automáticamente o puedes pegar aquí)</label>
+          <textarea id="aigen-notes-content" placeholder="Pega aquí tus apuntes, o deja vacío para usar tus notas guardadas..." style="min-height:120px;"></textarea>
+          <button class="btn-ghost mt-8" onclick="aigenLoadNotes()" style="padding:7px 14px;font-size:12px;">📓 Cargar mis apuntes</button>
+        </div>
+        <div class="flex gap-10">
+          <div style="flex:1;">
+            <label class="field-label">Número de flashcards</label>
+            <select id="aigen-count" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;border-radius:10px;padding:8px 12px;width:100%;outline:none;font-size:13px;">
+              <option value="8">8 tarjetas</option>
+              <option value="12">12 tarjetas</option>
+              <option value="16" selected>16 tarjetas</option>
+              <option value="20">20 tarjetas</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label class="field-label">Distribuir en días</label>
+            <select id="aigen-days" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;border-radius:10px;padding:8px 12px;width:100%;outline:none;font-size:13px;">
+              <option value="1">1 día</option>
+              <option value="3" selected>3 días</option>
+              <option value="5">5 días</option>
+              <option value="7">7 días</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-primary btn-full" onclick="aigenGenerate()">✨ Generar Flashcards con IA →</button>
+        <div id="aigen-loader" style="display:none;" class="ai-loader"><div class="ai-spinner"></div><span>Analizando apuntes y generando flashcards...</span></div>
+        <div id="aigen-result" style="display:none;padding:14px;border-radius:12px;background:rgba(61,255,176,.08);border:1px solid rgba(61,255,176,.3);">
+          <div style="font-weight:700;color:var(--green);margin-bottom:6px;">✅ ¡Flashcards generadas!</div>
+          <div class="fs-13 color-muted" id="aigen-result-text"></div>
+          <button class="btn-primary mt-10" style="padding:8px 18px;font-size:13px;" onclick="fcTab('study')">Ir a estudiar →</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- List mode -->
+  <div id="fc-list" style="display:none;"></div>
+</div>
+
+<!-- ──────── EXAMEN ──────── -->
+<div id="section-examen" class="section animate">
+  <!-- Config -->
+  <div id="ex-config" style="max-width:580px;">
+    <h1 class="page-title">📝 Simulación de Examen</h1>
+    <p class="page-sub">La IA genera un examen basado en tus apuntes y el temario</p>
+    <div class="sim-exam-header">
+      <div class="flex items-center gap-10 mb-12">
+        <span class="ai-ready-badge">✨ Generado por IA</span>
+      </div>
+      <div class="flex flex-col gap-12">
+        <div><label class="field-label">Materia</label><input id="ex-materia" placeholder="Ej: Biología, Cálculo Diferencial..."/></div>
+        <div>
+          <label class="field-label">Temas a evaluar (uno por línea)</label>
+          <textarea id="ex-temas-input" placeholder="Pega el temario o escribe los temas...&#10;Ej:&#10;Fotosíntesis&#10;Mitosis&#10;ADN y ARN" style="min-height:90px;"></textarea>
+          <button class="btn-ghost mt-6" style="padding:7px 14px;font-size:12px;" onclick="exLoadFromNotes()">📓 Cargar desde mis apuntes</button>
+        </div>
+        <div class="flex gap-10">
+          <div style="flex:1;">
+            <label class="field-label">Número de preguntas</label>
+            <select id="ex-num-preguntas" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;border-radius:10px;padding:8px 12px;width:100%;outline:none;font-size:13px;">
+              <option value="10">10 preguntas</option>
+              <option value="20" selected>20 preguntas</option>
+              <option value="25">25 preguntas</option>
+              <option value="30">30 preguntas</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label class="field-label">Dificultad</label>
+            <select id="ex-dificultad" style="background:var(--surface);border:1.5px solid var(--border);color:var(--text);font-family:'Sora',sans-serif;border-radius:10px;padding:8px 12px;width:100%;outline:none;font-size:13px;">
+              <option value="fácil">Fácil</option>
+              <option value="media" selected>Media</option>
+              <option value="difícil">Difícil</option>
+              <option value="mixta">Mixta</option>
+            </select>
+          </div>
+        </div>
+        <div id="ex-gen-loader" style="display:none;" class="ai-loader"><div class="ai-spinner"></div><span id="ex-gen-loader-text">Generando examen personalizado...</span></div>
+        <button class="btn-primary btn-full" style="background:linear-gradient(135deg,var(--accent),var(--accent-light));font-size:15px;" onclick="generateAndStartExam()" id="ex-gen-btn">✨ Generar y Comenzar Examen →</button>
+      </div>
+    </div>
+    <!-- Quick start with existing cards -->
+    <div class="card" style="border-color:rgba(245,197,66,.25);">
+      <div style="font-weight:700;font-size:13px;margin-bottom:10px;color:var(--gold);">⚡ Inicio rápido con mis flashcards</div>
+      <p class="fs-12 color-muted mb-10">Usa las flashcards que ya tienes para hacer un examen rápido.</p>
+      <button class="btn-ghost" style="width:100%;" onclick="startExamFromCards()">Examen con mis tarjetas →</button>
+    </div>
+  </div>
+  <!-- Quiz -->
+  <div id="ex-quiz" style="display:none;max-width:560px;">
+    <div class="flex justify-between mb-14">
+      <span style="font-family:'Space Mono';color:var(--muted);font-size:13px;">⏱ <span id="ex-time">00:00</span></span>
+      <span class="fs-13 color-muted" id="ex-counter">1 / 20</span>
+    </div>
+    <div id="ex-progress-bar"><div id="ex-progress-fill" style="width:5%;"></div></div>
+    <span class="tag tag-gold mb-14" id="ex-tema" style="display:inline-block;">Tema</span>
+    <div style="font-size:19px;font-weight:700;margin-bottom:22px;line-height:1.4;" id="ex-question">...</div>
+    <div id="ex-options" class="flex flex-col gap-10 mb-20"></div>
+    <button class="btn-primary btn-full" id="ex-next-btn" style="opacity:.5;" disabled onclick="exNext()">Siguiente →</button>
+  </div>
+  <!-- Result -->
+  <div id="ex-result" style="display:none;max-width:560px;">
+    <div class="text-center mb-20">
+      <div style="font-size:58px;" id="ex-result-emoji">🏆</div>
+      <h2 style="font-size:24px;font-weight:800;margin-top:8px;" id="ex-result-title">¡Excelente!</h2>
+      <div id="ex-result-pct">—</div>
+      <p class="fs-13 color-muted" id="ex-result-sub"></p>
+    </div>
+    <div id="ex-review"></div>
+    <button class="btn-primary btn-full mt-14" onclick="resetExam()">Intentar de nuevo</button>
+  </div>
+</div>
+
+<!-- ──────── CALCULADORA ──────── -->
+<div id="section-calificaciones" class="section animate">
+  <h1 class="page-title">🎯 Calculadora de Calificaciones</h1>
+  <p class="page-sub">Sabe exactamente qué necesitas para acreditar tu materia</p>
+  <div class="grid-cal">
+    <!-- Left -->
+    <div class="flex flex-col gap-14">
+      <!-- Min aprobatorio -->
+      <div class="card flex justify-between items-center">
+        <div>
+          <div style="font-weight:700;font-size:14px;">Mínimo aprobatorio</div>
+          <div class="fs-12 color-muted mt-4">Calificación mínima para pasar la materia</div>
+        </div>
+        <div class="flex items-center gap-8">
+          <input type="number" id="cal-min" min="0" max="100" value="60" style="width:74px;text-align:center;font-size:22px;font-weight:800;color:var(--gold);padding:7px 8px;" oninput="calcUpdate()"/>
+          <span class="color-muted fw-700 fs-14">pts</span>
+        </div>
+      </div>
+      <!-- Table -->
+      <div class="card">
+        <div class="flex justify-between items-center mb-14">
+          <div style="font-weight:700;font-size:14px;">Mis evaluaciones</div>
+          <div class="fs-11 fw-700" id="cal-peso-status" style="color:var(--red);">⚠️ Suma: 100%</div>
+        </div>
+        <div class="calc-head">
+          <span>Evaluación</span><span>Peso</span><span>Calificación</span><span></span>
+        </div>
+        <div id="cal-rows"></div>
+        <div class="calc-row" style="padding-top:10px;border-top:1px solid var(--border);margin-top:8px;border-bottom:none;">
+          <input class="calc-name" id="cal-new-name" placeholder="Nueva evaluación..."/>
+          <input type="number" class="calc-input" id="cal-new-peso" placeholder="%"/>
+          <div></div>
+          <div class="add-btn" onclick="calcAddRow()">+</div>
+        </div>
+      </div>
+    </div>
+    <!-- Right -->
+    <div class="flex flex-col gap-14">
+      <!-- Actual -->
+      <div class="card text-center">
+        <div class="fs-11 color-muted fw-700 mb-10" style="letter-spacing:.5px;">CALIFICACIÓN ACTUAL</div>
+        <div id="cal-actual-val" style="font-size:54px;font-weight:800;line-height:1;color:var(--green);">0.0</div>
+        <div class="fs-12 color-muted mt-6" id="cal-actual-sub">con 0% del peso calificado</div>
+        <div style="margin:14px 0 4px;background:var(--surface);height:8px;border-radius:4px;position:relative;">
+          <div id="cal-bar" style="background:var(--green);height:8px;border-radius:4px;width:0%;transition:width .5s;"></div>
+          <div id="cal-min-mark" style="position:absolute;left:60%;top:-4px;width:2px;height:16px;background:var(--gold);border-radius:2px;"></div>
+        </div>
+        <div class="flex justify-between fs-11 color-muted"><span>0</span><span style="color:var(--gold);" id="cal-min-label">↑ mín. 60</span><span>100</span></div>
+      </div>
+      <!-- Necesitas -->
+      <div class="card text-center" id="cal-need-card" style="border:2px solid rgba(61,255,176,.3);">
+        <div class="fs-11 color-muted fw-700 mb-10" style="letter-spacing:.5px;" id="cal-need-label">NECESITAS EN LO QUE FALTA</div>
+        <div id="cal-need-val" style="font-size:52px;font-weight:800;line-height:1;color:var(--green);">—</div>
+        <div class="fs-12 color-muted mt-6" id="cal-need-sub">puntos (redondeado al alza)</div>
+        <div id="cal-need-badge" style="margin-top:12px;padding:9px 14px;border-radius:10px;font-size:13px;font-weight:700;"></div>
+      </div>
+      <!-- Proyecciones -->
+      <div class="card" id="cal-proj-card">
+        <div class="fs-11 color-muted fw-700 mb-12" style="letter-spacing:.5px;">PROYECCIONES</div>
+        <div id="cal-proj-rows"></div>
+      </div>
+      <!-- Peso bar -->
+      <div class="card">
+        <div class="fs-11 color-muted fw-700 mb-10" style="letter-spacing:.5px;">PESO EVALUADO VS PENDIENTE</div>
+        <div style="display:flex;height:10px;border-radius:5px;overflow:hidden;margin-bottom:10px;">
+          <div id="cal-peso-bar-done" style="background:linear-gradient(90deg,var(--accent),var(--accent-light));transition:width .5s;width:0%;"></div>
+          <div id="cal-peso-bar-left" style="background:var(--border);transition:width .5s;width:100%;"></div>
+        </div>
+        <div class="flex justify-between fs-12">
+          <span><strong style="color:var(--accent);" id="cal-pct-done">0%</strong> <span class="color-muted">calificado</span></span>
+          <span><strong class="color-muted" id="cal-pct-left">100%</strong> <span class="color-muted">pendiente</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────── APUNTES ──────── -->
+<div id="section-apuntes" class="section animate">
+  <div id="notes-layout">
+    <!-- List -->
+    <div>
+      <div class="flex justify-between items-center mb-14">
+        <h1 style="font-size:20px;font-weight:800;">📓 Apuntes</h1>
+        <button class="btn-primary" style="padding:6px 14px;font-size:13px;" onclick="addNote()">+ Nueva</button>
+      </div>
+      <div id="notes-list" class="flex flex-col gap-10"></div>
+    </div>
+    <!-- Editor -->
+    <div id="note-editor">
+      <div id="note-placeholder">
+        <span style="font-size:44px;">📓</span>
+        <span>Selecciona una nota o crea una nueva</span>
+      </div>
+      <div id="note-edit-area" style="display:none;flex:1;display:none;flex-direction:column;gap:14px;">
+        <div class="flex justify-between items-center">
+          <input id="note-title-input" placeholder="Título..."/>
+          <div class="flex gap-6" id="note-colors"></div>
+        </div>
+        <textarea id="note-body" placeholder="Escribe tus apuntes aquí..."></textarea>
+        <div class="flex gap-10">
+          <button class="btn-primary" style="padding:9px 22px;" onclick="saveNote()">Guardar</button>
+          <button class="btn-danger" onclick="deleteNote()">Eliminar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────── POMODORO ──────── -->
+<div id="section-temporizador" class="section animate" style="max-width:420px;margin:0 auto;text-align:center;">
+  <h1 class="page-title">⏱ Pomodoro</h1>
+  <p class="page-sub" style="margin-bottom:26px;">Técnica de estudio por bloques de tiempo</p>
+  <div class="flex gap-8 justify-center mb-20">
+    <button class="btn-ghost active" id="pomo-btn-work" onclick="pomoSwitch('work')">Enfoque<br/><span style="font-size:11px;opacity:.7;">25 min</span></button>
+    <button class="btn-ghost" id="pomo-btn-short" onclick="pomoSwitch('short')">Descanso<br/><span style="font-size:11px;opacity:.7;">5 min</span></button>
+    <button class="btn-ghost" id="pomo-btn-long" onclick="pomoSwitch('long')">Pausa larga<br/><span style="font-size:11px;opacity:.7;">15 min</span></button>
+  </div>
+  <div style="position:relative;width:230px;height:230px;margin:0 auto 28px;">
+    <svg id="pomo-ring" width="230" height="230" style="transform:rotate(-90deg);">
+      <circle cx="115" cy="115" r="100" fill="none" stroke="var(--border)" stroke-width="8"/>
+      <circle id="pomo-arc" cx="115" cy="115" r="100" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="628.3" stroke-dashoffset="628.3" style="transition:stroke-dashoffset 1s linear;"/>
+    </svg>
+    <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;">
+      <div class="pomo-timer" id="pomo-display">25:00</div>
+      <div class="fs-12 color-muted mt-4" id="pomo-label">🎯 Enfocado</div>
+    </div>
+  </div>
+  <div class="flex gap-10 justify-center mb-20">
+    <button class="btn-ghost" onclick="pomoReset()">↺ Reset</button>
+    <button id="pomo-toggle" style="padding:11px 36px;border-radius:12px;background:var(--accent);color:#fff;font-weight:800;font-size:15px;" onclick="pomoToggle()">▶ Iniciar</button>
+  </div>
+  <div class="card flex justify-center gap-20" style="padding:14px 18px;">
+    <div><div style="font-size:22px;font-weight:800;color:var(--accent);" id="pomo-cycles">0</div><div class="fs-11 color-muted">Ciclos hoy</div></div>
+    <div><div style="font-size:22px;font-weight:800;color:var(--gold);" id="pomo-minutes">0</div><div class="fs-11 color-muted">Min enfocado</div></div>
+  </div>
+</div>
+
+<!-- ──────── PROGRESO ──────── -->
+<div id="section-progreso" class="section animate">
+  <h1 class="page-title">📈 Mi Progreso</h1>
+  <div class="grid-2 mb-20" style="margin-top:22px;">
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:14px;">Actividad esta semana</div>
+      <div style="display:flex;gap:8px;align-items:flex-end;height:90px;">
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="width:100%;background:var(--accent);border-radius:5px;height:40%;min-height:4px;"></div><div style="font-size:10px;color:var(--muted);font-weight:700;">L</div></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="width:100%;background:var(--accent);border-radius:5px;height:70%;min-height:4px;"></div><div style="font-size:10px;color:var(--muted);font-weight:700;">M</div></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="width:100%;background:var(--accent);border-radius:5px;height:20%;min-height:4px;"></div><div style="font-size:10px;color:var(--muted);font-weight:700;">X</div></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="width:100%;background:var(--accent);border-radius:5px;height:90%;min-height:4px;"></div><div style="font-size:10px;color:var(--muted);font-weight:700;">J</div></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="width:100%;background:var(--accent);border-radius:5px;height:50%;min-height:4px;"></div><div style="font-size:10px;color:var(--muted);font-weight:700;">V</div></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="width:100%;background:var(--accent);border-radius:5px;height:80%;min-height:4px;"></div><div style="font-size:10px;color:var(--muted);font-weight:700;">S</div></div>
+        <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:5px;"><div style="width:100%;background:var(--accent);border-radius:5px;height:60%;min-height:4px;"></div><div style="font-size:10px;color:var(--muted);font-weight:700;">D</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div style="font-weight:700;margin-bottom:14px;">Rendimiento por tema</div>
+      <div class="flex flex-col gap-12">
+        <div><div class="flex justify-between mb-6 fs-13"><span>Biología</span><span style="color:var(--green);font-weight:700;">75%</span></div><div class="bar-track"><div class="bar-fill" style="background:var(--green);width:75%;"></div></div></div>
+        <div><div class="flex justify-between mb-6 fs-13"><span>Matemáticas</span><span style="color:var(--accent);font-weight:700;">60%</span></div><div class="bar-track"><div class="bar-fill" style="background:var(--accent);width:60%;"></div></div></div>
+        <div><div class="flex justify-between mb-6 fs-13"><span>Física</span><span style="color:var(--gold);font-weight:700;">40%</span></div><div class="bar-track"><div class="bar-fill" style="background:var(--gold);width:40%;"></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-weight:700;margin-bottom:14px;">🏅 Logros</div>
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;">
+      <div class="achievement unlocked"><div class="ach-icon">🔥</div><div class="ach-title">Racha 7 días</div><div class="ach-desc">¡7 días seguidos!</div></div>
+      <div class="achievement unlocked"><div class="ach-icon">🃏</div><div class="ach-title">Memorizador</div><div class="ach-desc">50 flashcards revisadas</div></div>
+      <div class="achievement locked"><div class="ach-icon">🏆</div><div class="ach-title">Excelente</div><div class="ach-desc">100% en un examen</div></div>
+      <div class="achievement locked"><div class="ach-icon">⏱</div><div class="ach-title">Maratonista</div><div class="ach-desc">5 horas en Pomodoro</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ──────── EXTRAORDINARIO ──────── -->
+<div id="section-extraordinario" class="section animate">
+  <div class="flex items-center gap-12 mb-16">
+    <div style="width:44px;height:44px;border-radius:13px;background:rgba(255,94,126,.18);display:flex;align-items:center;justify-content:center;font-size:24px;flex-shrink:0;">🚨</div>
+    <div>
+      <h1 class="page-title" style="margin-bottom:0;">Modo Extraordinario</h1>
+      <p class="fs-12 color-muted mt-4">IA genera tu plan, flashcards, ejercicios y exámenes personalizados</p>
+    </div>
+  </div>
+
+  <!-- STEP 1: Configuración -->
+  <div id="ext-step1" class="ext-step active">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;max-width:900px;">
+      <div class="flex flex-col gap-14">
+        <div class="card">
+          <div style="font-weight:700;font-size:14px;margin-bottom:14px;">📋 Información del Extraordinario</div>
+          <div class="flex flex-col gap-12">
+            <div><label class="field-label">Nombre de la materia</label><input id="ext-materia" placeholder="Ej: Cálculo Diferencial, Biología..."/></div>
+            <div><label class="field-label">Fecha del extraordinario</label><input type="date" id="ext-fecha" style="cursor:pointer;"/></div>
+            <div>
+              <label class="field-label">Horas disponibles por día</label>
+              <div class="flex items-center gap-10">
+                <input type="range" id="ext-horas-range" min="1" max="10" value="3" oninput="document.getElementById('ext-horas-val').textContent=this.value" style="flex:1;accent-color:var(--accent);"/>
+                <span id="ext-horas-val" style="font-weight:800;color:var(--accent);font-size:18px;min-width:28px;">3</span>
+                <span class="color-muted fs-13">hrs/día</span>
+              </div>
+            </div>
+            <div>
+              <label class="field-label">Tu nivel actual en la materia</label>
+              <div class="flex gap-8">
+                <button class="btn-ghost active" id="ext-nivel-bajo" onclick="extSetNivel('bajo')">😰 Bajo</button>
+                <button class="btn-ghost" id="ext-nivel-medio" onclick="extSetNivel('medio')">😐 Medio</button>
+                <button class="btn-ghost" id="ext-nivel-alto" onclick="extSetNivel('alto')">😊 Alto</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card flex flex-col gap-12">
+        <div style="font-weight:700;font-size:14px;">📚 Temario de la Materia</div>
+        <p class="fs-12 color-muted" style="margin-top:-6px;">La IA usará este temario para generar flashcards, ejercicios y exámenes personalizados.</p>
+        <div>
+          <label class="field-label">Pegar temario completo (un tema por línea)</label>
+          <textarea id="ext-temario-bulk" placeholder="Pega aquí el temario completo..." style="min-height:100px;"></textarea>
+          <button class="btn-primary" style="margin-top:8px;padding:9px 16px;font-size:13px;width:100%;" onclick="extBulkAdd()">📋 Agregar todos los temas</button>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <input id="ext-topic-input" placeholder="O escribe un tema..." onkeydown="if(event.key==='Enter')extAddTopic()"/>
+          <button class="btn-primary" style="padding:9px 14px;white-space:nowrap;" onclick="extAddTopic()">+ Agregar</button>
+        </div>
+        <div id="ext-topics-container" style="min-height:50px;display:flex;flex-wrap:wrap;gap:0;align-content:flex-start;">
+          <span class="color-muted fs-13" id="ext-topics-empty">Aún no has agregado temas...</span>
+        </div>
+        <div class="flex justify-between items-center" style="border-top:1px solid var(--border);padding-top:10px;">
+          <span class="fs-12 color-muted"><span id="ext-topic-count">0</span> temas agregados</span>
+          <button style="background:none;border:none;color:var(--red);font-size:12px;cursor:pointer;" onclick="extClearTopics()">🗑 Limpiar</button>
+        </div>
+      </div>
+    </div>
+    <div style="max-width:900px;margin-top:16px;">
+      <button class="btn-primary btn-full" style="background:linear-gradient(135deg,var(--red),#9b2335);font-size:16px;font-weight:800;padding:16px;" onclick="extGenerate()">
+        🚨 Generar Plan + Recursos de Estudio con IA →
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 2: Dashboard del extraordinario -->
+  <div id="ext-step2" class="ext-step" style="max-width:960px;">
+    <!-- Global loader -->
+    <div id="ext-loader" class="ai-loader"><div class="ai-spinner"></div><span id="ext-loader-text">Analizando temario...</span></div>
+
+    <!-- Main content -->
+    <div id="ext-main-content" style="display:none;">
+      <!-- Header -->
+      <div class="card mb-16" style="background:linear-gradient(135deg,rgba(255,94,126,.1),rgba(108,99,255,.07));border-color:rgba(255,94,126,.28);">
+        <div class="flex justify-between items-center flex-wrap gap-12">
+          <div>
+            <div style="font-size:11px;color:var(--red);font-weight:700;letter-spacing:.5px;margin-bottom:4px;">MODO EXTRAORDINARIO ACTIVO</div>
+            <div style="font-size:20px;font-weight:800;" id="ext-plan-title">—</div>
+            <div class="fs-13 color-muted mt-4" id="ext-plan-subtitle">—</div>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px;text-align:center;">
+            <div><div style="font-size:24px;font-weight:800;color:var(--red);" id="ext-dias-total">—</div><div class="fs-11 color-muted">días</div></div>
+            <div><div style="font-size:24px;font-weight:800;color:var(--accent);" id="ext-temas-total">—</div><div class="fs-11 color-muted">temas</div></div>
+            <div><div style="font-size:24px;font-weight:800;color:var(--gold);" id="ext-horas-total">—</div><div class="fs-11 color-muted">horas</div></div>
+          </div>
+        </div>
+        <!-- Progreso general -->
+        <div style="margin-top:14px;">
+          <div class="flex justify-between fs-12 color-muted mb-6"><span>Progreso del plan</span><span><span id="ext-tareas-done">0</span>/<span id="ext-tareas-total">0</span> tareas</span></div>
+          <div style="background:var(--surface);height:8px;border-radius:4px;"><div id="ext-progress-overall" style="background:linear-gradient(90deg,var(--red),var(--accent));height:8px;border-radius:4px;width:0%;transition:width .5s;"></div></div>
+        </div>
+      </div>
+
+      <!-- TABS del extraordinario -->
+      <div class="flex gap-8 mb-16" style="flex-wrap:wrap;">
+        <button class="btn-ghost active" id="extab-plan" onclick="extTab('plan')">📅 Plan de estudio</button>
+        <button class="btn-ghost" id="extab-flashcards" onclick="extTab('flashcards')">🃏 Flashcards IA</button>
+        <button class="btn-ghost" id="extab-ejercicios" onclick="extTab('ejercicios')">✏️ Ejercicios IA</button>
+        <button class="btn-ghost" id="extab-examen" onclick="extTab('examen')">📝 Examen IA</button>
+        <button class="btn-ghost" id="extab-resumen" onclick="extTab('resumen')">📖 Resumen IA</button>
+      </div>
+
+      <!-- TAB: Plan de estudio -->
+      <div id="ext-tab-plan">
+        <div id="ext-urgency-banner" class="card mb-14" style="display:none;border-color:rgba(255,94,126,.35);background:rgba(255,94,126,.07);">
+          <div style="font-weight:700;color:var(--red);margin-bottom:8px;">⚡ Estrategia recomendada</div>
+          <div id="ext-urgency-tips" class="fs-13" style="line-height:1.7;"></div>
+        </div>
+        <div id="ext-days-container"></div>
+        <div class="flex gap-12 mt-14">
+          <button class="btn-ghost" onclick="extReset()" style="flex:1;">← Modificar</button>
+          <button class="btn-primary" style="flex:2;background:linear-gradient(135deg,var(--red),#9b2335);" onclick="extRegenerate()">🔄 Regenerar todo</button>
+        </div>
+      </div>
+
+      <!-- TAB: Flashcards IA -->
+      <div id="ext-tab-flashcards" style="display:none;">
+        <div id="ext-fc-area"></div>
+      </div>
+
+      <!-- TAB: Ejercicios IA -->
+      <div id="ext-tab-ejercicios" style="display:none;">
+        <div id="ext-ej-area"></div>
+      </div>
+
+      <!-- TAB: Examen IA -->
+      <div id="ext-tab-examen" style="display:none;">
+        <div id="ext-exam-area"></div>
+      </div>
+
+      <!-- TAB: Resumen IA -->
+      <div id="ext-tab-resumen" style="display:none;">
+        <div id="ext-resumen-area"></div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- ──────── TAREAS ──────── -->
+<div id="section-tareas" class="section animate">
+  <div class="flex justify-between items-center mb-6">
+    <div>
+      <h1 class="page-title" style="margin-bottom:2px;">📋 Tareas</h1>
+      <p class="fs-13 color-muted">La IA te ayuda a completar cualquier tarea</p>
+    </div>
+    <button class="btn-primary" style="padding:8px 18px;font-size:13px;" onclick="openNewTareaModal()">+ Nueva Tarea</button>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 420px;gap:20px;align-items:start;">
+    <!-- Lista de tareas -->
+    <div>
+      <!-- Filtros -->
+      <div class="flex gap-8 mb-14" style="flex-wrap:wrap;">
+        <button class="btn-ghost active" id="tarea-filter-todas" onclick="tareasSetFilter('todas')">Todas</button>
+        <button class="btn-ghost" id="tarea-filter-pendiente" onclick="tareasSetFilter('pendiente')">Pendientes</button>
+        <button class="btn-ghost" id="tarea-filter-completada" onclick="tareasSetFilter('completada')">Completadas</button>
+      </div>
+      <div id="tareas-list"></div>
+      <div id="tareas-empty" style="display:none;text-align:center;padding:40px 0;color:var(--muted);">
+        <div style="font-size:42px;">📋</div>
+        <div class="mt-8 fw-700">No hay tareas aquí</div>
+        <div class="fs-13 mt-6">Agrega una nueva tarea para empezar</div>
+      </div>
+    </div>
+
+    <!-- Asistente IA para tareas -->
+    <div class="card" style="position:sticky;top:20px;">
+      <div style="font-weight:700;font-size:14px;margin-bottom:4px;">🤖 Asistente de Tareas</div>
+      <p class="fs-12 color-muted mb-12">Selecciona una tarea o escribe tu pregunta directamente</p>
+      <div id="tarea-seleccionada-banner" style="display:none;padding:8px 12px;border-radius:10px;background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);margin-bottom:12px;font-size:13px;">
+        <div style="font-size:10px;color:var(--accent);font-weight:700;margin-bottom:3px;">TAREA ACTIVA</div>
+        <div id="tarea-seleccionada-titulo" style="font-weight:600;"></div>
+      </div>
+      <div id="chat-messages"></div>
+      <div class="flex gap-8 mt-10">
+        <textarea id="chat-input" placeholder="Escribe tu pregunta sobre la tarea..." style="min-height:52px;flex:1;resize:none;" onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendTareaChat();}"></textarea>
+        <button class="btn-primary" style="padding:10px 14px;align-self:flex-end;" onclick="sendTareaChat()">→</button>
+      </div>
+      <div id="chat-loader" style="display:none;" class="ai-loader mt-8"><div class="ai-spinner"></div><span>La IA está pensando...</span></div>
+    </div>
+  </div>
+
+  <!-- Modal nueva tarea -->
+  <div id="tarea-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;align-items:center;justify-content:center;">
+    <div class="card" style="width:500px;max-width:95vw;padding:28px;position:relative;">
+      <div style="font-weight:800;font-size:17px;margin-bottom:18px;">📋 Nueva Tarea</div>
+      <div class="flex flex-col gap-12">
+        <div><label class="field-label">Título de la tarea</label><input id="tarea-titulo" placeholder="Ej: Resumen de Biología, Ejercicios de Cálculo..."/></div>
+        <div><label class="field-label">Descripción / Instrucciones</label><textarea id="tarea-desc" placeholder="Describe la tarea con detalle para que la IA pueda ayudarte mejor..." style="min-height:90px;"></textarea></div>
+        <div class="flex gap-10">
+          <div style="flex:1;"><label class="field-label">Materia</label><input id="tarea-materia" placeholder="Ej: Biología..."/></div>
+          <div style="flex:1;"><label class="field-label">Fecha de entrega</label><input type="date" id="tarea-fecha" style="cursor:pointer;"/></div>
+        </div>
+        <div>
+          <label class="field-label">Prioridad</label>
+          <div class="flex gap-8">
+            <button class="btn-ghost active" id="tarea-prio-alta" onclick="setTareaPrio('alta')">🔴 Alta</button>
+            <button class="btn-ghost" id="tarea-prio-media" onclick="setTareaPrio('media')">🟡 Media</button>
+            <button class="btn-ghost" id="tarea-prio-baja" onclick="setTareaPrio('baja')">🟢 Baja</button>
+          </div>
+        </div>
+        <div class="flex gap-10 mt-6">
+          <button class="btn-ghost" style="flex:1;" onclick="closeTareaModal()">Cancelar</button>
+          <button class="btn-primary" style="flex:2;" onclick="saveTarea()">Guardar Tarea</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+/* ═══════════════════════════════
+   SUPABASE INIT
+═══════════════════════════════ */
+const SUPA_URL = 'https://rbijodsnlneqrceomqzm.supabase.co';
+const SUPA_KEY = 'sb_publishable_wpOSfLIOpEdO0ha9l6v7ng_ojIfBz3g';
+// Use a non-conflicting name to avoid shadowing the global supabase object
+let _supaClient = null;
+function _getClient() {
+  if (_supaClient) return _supaClient;
+  try {
+    const lib = (typeof supabase !== 'undefined' && supabase && supabase.createClient) ? supabase
+               : (window.supabase && window.supabase.createClient) ? window.supabase : null;
+    if (lib) _supaClient = lib.createClient(SUPA_URL, SUPA_KEY);
+  } catch(e) { console.warn('Supabase init error:', e.message); }
+  return _supaClient;
+}
+
+// Generic DB helpers
+async function dbInsert(table, data) {
+  const db = _getClient(); if (!db) return null;
+  try { const { data: d, error } = await db.from(table).insert(data).select(); if(error) throw error; return d; } catch(e) { console.warn('DB insert error:', e.message); return null; }
+}
+async function dbSelect(table, filter) {
+  const db = _getClient(); if (!db) return [];
+  try { let q = db.from(table).select('*'); if(filter) Object.entries(filter).forEach(([k,v])=>{ q=q.eq(k,v); }); const {data,error}=await q.order('created_at',{ascending:false}); if(error) throw error; return data||[]; } catch(e) { console.warn('DB select error:', e.message); return []; }
+}
+async function dbUpdate(table, id, data) {
+  const db = _getClient(); if (!db) return null;
+  try { const {error}=await db.from(table).update(data).eq('id',id); if(error) throw error; return true; } catch(e) { console.warn('DB update error:', e.message); return null; }
+}
+async function dbDelete(table, id) {
+  const db = _getClient(); if (!db) return null;
+  try { const {error}=await db.from(table).delete().eq('id',id); if(error) throw error; return true; } catch(e) { console.warn('DB delete error:', e.message); return null; }
+}
+
+/* ═══════════════════════════════
+   NAVIGATION
+═══════════════════════════════ */
+function goTo(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const sec=document.getElementById('section-'+id);
+  if(sec){sec.classList.add('active');sec.classList.remove('animate');void sec.offsetWidth;sec.classList.add('animate');}
+  document.querySelectorAll('[data-section="'+id+'"]').forEach(n=>n.classList.add('active'));
+  if(id==='tareas') loadTareas();
+}
+document.querySelectorAll('.nav-item').forEach(n=>{
+  n.addEventListener('click',()=>goTo(n.dataset.section));
+});
+
+/* ═══════════════════════════════
+   FLASHCARDS
+═══════════════════════════════ */
+const FC_CARDS=[
+  {front:"¿Qué es la fotosíntesis?",tema:"Biología",dia:1,correcta:"Proceso por el cual las plantas convierten luz solar, agua y CO₂ en glucosa y oxígeno.",incorrectas:["Proceso por el cual las células producen energía descomponiendo glucosa.","Mecanismo de transporte de nutrientes en el sistema vascular de las plantas."]},
+  {front:"¿Qué es la mitosis?",tema:"Biología",dia:1,correcta:"División celular que produce dos células hijas genéticamente idénticas.",incorrectas:["División celular que produce cuatro células hijas con la mitad del material genético.","Proceso de fusión entre dos células para formar una célula madre."]},
+  {front:"¿Cuánto es la derivada de x²?",tema:"Matemáticas",dia:2,correcta:"2x",incorrectas:["x²","x/2"]},
+  {front:"¿Qué establece el teorema de Pitágoras?",tema:"Matemáticas",dia:2,correcta:"En un triángulo rectángulo: a² + b² = c², donde c es la hipotenusa.",incorrectas:["La suma de los ángulos interiores de cualquier triángulo es 180°.","El cuadrado de la hipotenusa es igual a la diferencia de los catetos."]},
+  {front:"¿Qué establece la segunda ley de Newton?",tema:"Física",dia:3,correcta:"F = m·a. La fuerza neta es igual a la masa por la aceleración.",incorrectas:["Todo cuerpo en reposo tiende a permanecer en reposo a menos que actúe una fuerza.","Por cada acción existe una reacción igual y opuesta."]}
+];
+
+let fcCards=[...FC_CARDS];
+let fcActiveCards=[]; // cards currently being studied (filtered by day/topic)
+let fcIdx=0,fcScoreGood=0,fcScoreBad=0,fcPhase='question',fcOptions=[],fcSelected=null;
+let fcTopicProgress={}; // {tema: {total, correct}}
+let fcCurrentDay='all', fcCurrentTopic='all';
+
+function shuffle(arr){const a=[...arr];for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+
+async function fcInit(){
+  // Load from Supabase if available
+  const dbCards = await dbSelect('flashcards');
+  if(dbCards && dbCards.length > 0){
+    fcCards = dbCards.map(c=>({
+      id: c.id,
+      front: c.pregunta,
+      tema: c.tema||'General',
+      dia: c.dia||1,
+      correcta: c.correcta,
+      incorrectas: c.incorrectas||[]
+    }));
+  }
+  fcBuildSelectors();
+  fcSetActive('all','all');
+}
+
+function fcBuildSelectors(){
+  const days=[...new Set(fcCards.map(c=>c.dia||1))].sort((a,b)=>a-b);
+  const topics=[...new Set(fcCards.map(c=>c.tema))].sort();
+  const daySelect=document.getElementById('fc-day-select');
+  const topicSelect=document.getElementById('fc-topic-select');
+  daySelect.innerHTML='<option value="all">📚 Todos los días</option>'+days.map(d=>`<option value="${d}">📅 Día ${d}</option>`).join('');
+  topicSelect.innerHTML='<option value="all">🏷 Todos los temas</option>'+topics.map(t=>`<option value="${t}">${t}</option>`).join('');
+  document.getElementById('fc-subtitle').textContent=`${fcCards.length} tarjetas · Elige día o tema para estudiar`;
+}
+
+function fcSetActive(day, topic){
+  fcCurrentDay=day; fcCurrentTopic=topic;
+  let filtered=[...fcCards];
+  if(day!=='all') filtered=filtered.filter(c=>(c.dia||1)==Number(day));
+  if(topic!=='all') filtered=filtered.filter(c=>c.tema===topic);
+  fcActiveCards=shuffle(filtered);
+  fcIdx=0; fcScoreGood=0; fcScoreBad=0; fcPhase='question';
+  document.getElementById('fc-session-done').style.display='none';
+  // Update topic progress panel
+  fcTopicProgress={};
+  fcActiveCards.forEach(c=>{ if(!fcTopicProgress[c.tema]) fcTopicProgress[c.tema]={total:0,correct:0}; fcTopicProgress[c.tema].total++; });
+  renderFcTopicProgress();
+  // Day badge
+  const badge=document.getElementById('fc-day-badge');
+  if(day!=='all'){badge.style.display='inline-flex';badge.textContent='📅 Día '+day;}
+  else badge.style.display='none';
+  if(fcActiveCards.length>0) fcLoad();
+  else{
+    document.getElementById('fc-question').textContent='No hay tarjetas para este filtro.';
+    document.getElementById('fc-options').innerHTML='';
+    document.getElementById('fc-counter').textContent='0 / 0';
+    document.getElementById('fc-progress-fill').style.width='0%';
+  }
+}
+
+function fcLoadByDay(){fcSetActive(document.getElementById('fc-day-select').value, document.getElementById('fc-topic-select').value);}
+function fcLoadByTopic(){fcSetActive(document.getElementById('fc-day-select').value, document.getElementById('fc-topic-select').value);}
+function fcShuffleActive(){fcActiveCards=shuffle(fcActiveCards);fcIdx=0;fcScoreGood=0;fcScoreBad=0;document.getElementById('fc-session-done').style.display='none';if(fcActiveCards.length>0)fcLoad();}
+
+function renderFcTopicProgress(){
+  const cont=document.getElementById('fc-topic-progress');
+  if(Object.keys(fcTopicProgress).length===0){cont.style.display='none';return;}
+  cont.style.display='block';
+  cont.innerHTML=Object.entries(fcTopicProgress).map(([t,v])=>{
+    const pct=v.total>0?Math.round(v.correct/v.total*100):0;
+    const col=pct>=70?'var(--green)':pct>=40?'var(--gold)':'var(--muted)';
+    return`<div class="fc-progress-topic"><span>${t}</span><div class="flex items-center gap-8"><div style="width:80px;background:var(--surface);border-radius:4px;height:5px;overflow:hidden;"><div style="width:${pct}%;height:5px;background:${col};border-radius:4px;"></div></div><span style="font-weight:700;font-size:11px;color:${col};min-width:32px;">${pct}%</span></div></div>`;
+  }).join('');
+}
+
+function fcLoad(){
+  if(!fcActiveCards.length)return;
+  const c=fcActiveCards[fcIdx];
+  document.getElementById('fc-tema').textContent=c.tema||'General';
+  document.getElementById('fc-question').textContent=c.front;
+  document.getElementById('fc-counter').textContent=(fcIdx+1)+' / '+fcActiveCards.length;
+  document.getElementById('fc-progress-fill').style.width=(((fcIdx+1)/fcActiveCards.length)*100)+'%';
+  document.getElementById('fc-hint').style.display='block';
+  document.getElementById('fc-feedback').style.display='none';
+  document.getElementById('fc-session-done').style.display='none';
+  fcPhase='question'; fcSelected=null;
+  fcOptions=shuffle([{text:c.correcta,correct:true},...(c.incorrectas||[]).map(t=>({text:t,correct:false}))]);
+  const cont=document.getElementById('fc-options');
+  cont.innerHTML='';
+  fcOptions.forEach((opt,i)=>{
+    const btn=document.createElement('button');
+    btn.className='opt-btn';
+    btn.innerHTML=`<div class="opt-badge">${String.fromCharCode(65+i)}</div><span>${opt.text}</span>`;
+    btn.onclick=()=>fcSelect(i);
+    cont.appendChild(btn);
+  });
+  document.getElementById('fc-score-good').textContent='✅ '+fcScoreGood;
+  document.getElementById('fc-score-bad').textContent='❌ '+fcScoreBad;
+}
+
+function fcSelect(i){
+  if(fcPhase!=='question')return;
+  fcPhase='answering'; fcSelected=i;
+  const btns=document.querySelectorAll('#fc-options .opt-btn');
+  btns.forEach((btn,idx)=>{
+    btn.disabled=true;
+    const badge=btn.querySelector('.opt-badge');
+    if(fcOptions[idx].correct){btn.classList.add('correct');badge.textContent='✓';}
+    else if(idx===i){btn.classList.add('wrong');badge.textContent='✗';}
+    else{btn.classList.add('dimmed');}
+  });
+  const isCorrect=fcOptions[i].correct;
+  if(isCorrect){fcScoreGood++; const c=fcActiveCards[fcIdx]; if(fcTopicProgress[c.tema])fcTopicProgress[c.tema].correct++;}
+  else fcScoreBad++;
+  document.getElementById('fc-score-good').textContent='✅ '+fcScoreGood;
+  document.getElementById('fc-score-bad').textContent='❌ '+fcScoreBad;
+  renderFcTopicProgress();
+  document.getElementById('fc-hint').style.display='none';
+  const fb=document.getElementById('fc-feedback');
+  fb.style.display='flex';
+  fb.style.background=isCorrect?'rgba(61,255,176,.12)':'rgba(255,94,126,.12)';
+  fb.style.border='1px solid '+(isCorrect?'rgba(61,255,176,.4)':'rgba(255,94,126,.4)');
+  const txt=document.getElementById('fc-feedback-text');
+  txt.textContent=isCorrect?'🎉 ¡Correcto!':'😕 Incorrecto — revisa la opción verde';
+  txt.style.color=isCorrect?'var(--green)':'var(--red)';
+  // Save progress to DB
+  if(fcActiveCards[fcIdx].id) dbUpdate('flashcards', fcActiveCards[fcIdx].id, {ultima_respuesta: isCorrect?'correcta':'incorrecta', veces_visto: (fcActiveCards[fcIdx].veces_visto||0)+1});
+}
+
+function fcNext(){
+  if(fcIdx<fcActiveCards.length-1){fcIdx++;fcLoad();}
+  else{
+    // Session complete
+    document.getElementById('fc-feedback').style.display='none';
+    document.getElementById('fc-options').innerHTML='';
+    const done=document.getElementById('fc-session-done');
+    done.style.display='block';
+    const pct=fcActiveCards.length>0?Math.round(fcScoreGood/fcActiveCards.length*100):0;
+    document.getElementById('fc-session-score').textContent=`${fcScoreGood} de ${fcActiveCards.length} correctas (${pct}%) · ${fcCurrentDay!=='all'?'Día '+fcCurrentDay:'Todos los días'}`;
+    // Save session to DB
+    dbInsert('sesiones_estudio',{tipo:'flashcards',correctas:fcScoreGood,total:fcActiveCards.length,dia:fcCurrentDay,tema:fcCurrentTopic});
+  }
+}
+
+function fcRestartSession(){fcIdx=0;fcScoreGood=0;fcScoreBad=0;document.getElementById('fc-session-done').style.display='none';Object.keys(fcTopicProgress).forEach(k=>fcTopicProgress[k].correct=0);renderFcTopicProgress();if(fcActiveCards.length>0)fcLoad();}
+
+function fcNextDayPrompt(){
+  const curDay=fcCurrentDay==='all'?1:Number(fcCurrentDay);
+  const days=[...new Set(fcCards.map(c=>c.dia||1))].sort((a,b)=>a-b);
+  const nextDay=days.find(d=>d>curDay);
+  if(nextDay){
+    document.getElementById('fc-day-select').value=nextDay;
+    fcSetActive(String(nextDay), 'all');
+    document.getElementById('fc-topic-select').value='all';
+  } else { alert('¡Has completado todos los días de estudio! 🎉'); }
+}
+
+function fcTab(tab){
+  ['study','create','aigen','list'].forEach(t=>{
+    document.getElementById('fc-'+t).style.display=t===tab?'block':'none';
+    const btn=document.getElementById('tab-'+t);
+    if(btn) btn.classList.toggle('active',t===tab);
+  });
+  if(tab==='list') renderFcList();
+  if(tab==='study' && fcActiveCards.length===0) fcInit();
+}
+
+function renderFcList(){
+  const cont=document.getElementById('fc-list');
+  cont.innerHTML='';
+  if(!fcCards.length){cont.innerHTML='<p class="color-muted fs-13 text-center" style="padding:30px;">No hay flashcards guardadas.</p>';return;}
+  // Group by day
+  const byDay={};
+  fcCards.forEach(c=>{const d=c.dia||1; if(!byDay[d])byDay[d]=[]; byDay[d].push(c);});
+  Object.keys(byDay).sort((a,b)=>a-b).forEach(day=>{
+    const group=document.createElement('div');
+    group.innerHTML=`<div class="fs-12 fw-700 color-muted mb-8 mt-14" style="text-transform:uppercase;letter-spacing:.5px;">📅 DÍA ${day} · ${byDay[day].length} tarjetas</div>`;
+    byDay[day].forEach(c=>{
+      const div=document.createElement('div');
+      div.className='card-sm mb-8';
+      div.innerHTML=`<div class="flex items-center gap-10 mb-8"><span class="tag tag-accent">${c.tema}</span><span style="font-weight:700;font-size:14px;">${c.front}</span></div>
+      <div class="flex gap-8 flex-wrap">
+        <span style="background:rgba(61,255,176,.12);color:var(--green);padding:4px 10px;border-radius:8px;font-size:12px;border:1px solid rgba(61,255,176,.25);">✅ ${c.correcta}</span>
+        ${(c.incorrectas||[]).map(ic=>`<span style="background:rgba(255,94,126,.1);color:var(--red);padding:4px 10px;border-radius:8px;font-size:12px;border:1px solid rgba(255,94,126,.25);">❌ ${ic}</span>`).join('')}
+      </div>
+      ${c.id?`<button onclick="fcDeleteCard('${c.id}')" style="background:none;border:none;color:var(--red);font-size:11px;cursor:pointer;margin-top:6px;">🗑 Eliminar</button>`:''}`;
+      group.appendChild(div);
+    });
+    cont.appendChild(group);
+  });
+}
+
+async function addCard(){
+  const front=document.getElementById('new-front').value.trim();
+  const correcta=document.getElementById('new-correct').value.trim();
+  const w1=document.getElementById('new-wrong1').value.trim();
+  const w2=document.getElementById('new-wrong2').value.trim();
+  const tema=document.getElementById('new-tema').value.trim()||'General';
+  const dia=Number(document.getElementById('new-dia').value)||1;
+  if(!front||!correcta||!w1){alert('La pregunta, respuesta correcta e incorrecta 1 son obligatorias.');return;}
+  const incorrectas=[w1];if(w2)incorrectas.push(w2);
+  const card={front,correcta,incorrectas,tema,dia};
+  // Save to DB
+  const saved = await dbInsert('flashcards',{pregunta:front,correcta,incorrectas,tema,dia});
+  if(saved&&saved[0]) card.id=saved[0].id;
+  fcCards.push(card);
+  fcBuildSelectors();
+  ['new-front','new-correct','new-wrong1','new-wrong2','new-tema','new-dia'].forEach(id=>document.getElementById(id).value='');
+  alert('¡Tarjeta agregada!');
+}
+
+async function fcDeleteCard(id){
+  if(!confirm('¿Eliminar esta tarjeta?'))return;
+  await dbDelete('flashcards', id);
+  fcCards=fcCards.filter(c=>c.id!==id);
+  renderFcList();
+  fcBuildSelectors();
+}
+
+// AI Generate from notes
+function aigenLoadNotes(){
+  const notesContent = notes.map(n=>n.titulo+': '+n.contenido).join('\n\n');
+  document.getElementById('aigen-notes-content').value=notesContent||'No hay apuntes guardados aún.';
+}
+
+async function aigenGenerate(){
+  const materia=document.getElementById('aigen-materia').value.trim();
+  const notesText=document.getElementById('aigen-notes-content').value.trim();
+  const count=Number(document.getElementById('aigen-count').value)||16;
+  const days=Number(document.getElementById('aigen-days').value)||3;
+  if(!materia){alert('Escribe el nombre de la materia.');return;}
+  const content=notesText||'Materia: '+materia;
+  document.getElementById('aigen-loader').style.display='flex';
+  document.getElementById('aigen-result').style.display='none';
+  try{
+    const perDay=Math.ceil(count/days);
+    const prompt=`Eres un profesor experto en "${materia}". Con base en estos apuntes del estudiante, genera exactamente ${count} flashcards distribuidas en ${days} días de estudio (${perDay} por día aproximadamente).
+
+APUNTES DEL ESTUDIANTE:
+${content.substring(0,3000)}
+
+Genera flashcards que cubran los conceptos más importantes de los apuntes. Distribuye las más fáciles en el día 1 y las más complejas en días posteriores.
+
+Responde SOLO con JSON válido sin markdown:
+{"flashcards":[{"pregunta":"...","correcta":"...","incorrectas":["...","..."],"tema":"...","dia":1}]}
+
+- Cada flashcard: pregunta clara, 1 correcta y 2 incorrectas plausibles.
+- tema: máximo 2-3 palabras del concepto.
+- dia: número de 1 a ${days}.
+- Total: exactamente ${count} flashcards.`;
+    const res=await callAI(prompt);
+    const parsed=JSON.parse(res);
+    const newCards=parsed.flashcards||[];
+    // Save to DB and local
+    for(const c of newCards){
+      const saved=await dbInsert('flashcards',{pregunta:c.pregunta,correcta:c.correcta,incorrectas:c.incorrectas,tema:c.tema,dia:c.dia});
+      fcCards.push({id:saved&&saved[0]?saved[0].id:null,front:c.pregunta,correcta:c.correcta,incorrectas:c.incorrectas,tema:c.tema,dia:c.dia});
+    }
+    fcBuildSelectors();
+    document.getElementById('aigen-loader').style.display='none';
+    document.getElementById('aigen-result').style.display='block';
+    document.getElementById('aigen-result-text').textContent=`${newCards.length} flashcards generadas y distribuidas en ${days} días de estudio.`;
+  }catch(e){
+    document.getElementById('aigen-loader').style.display='none';
+    alert('Error generando flashcards: '+e.message);
+  }
+}
+
+fcInit();
+
+/* ═══════════════════════════════
+   EXAMEN — SIMULACIÓN IA
+═══════════════════════════════ */
+let QUIZ=[];
+let exIdx=0,exAnswers={},exTimer=null,exSecs=0,exRunning=false;
+
+function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+
+function exLoadFromNotes(){
+  const notesContent=notes.map(n=>n.titulo+': '+n.contenido).join('\n\n');
+  document.getElementById('ex-temas-input').value=notesContent||'No hay apuntes guardados.';
+}
+
+async function generateAndStartExam(){
+  const materia=document.getElementById('ex-materia').value.trim();
+  const temasInput=document.getElementById('ex-temas-input').value.trim();
+  const numPreguntas=Number(document.getElementById('ex-num-preguntas').value)||20;
+  const dificultad=document.getElementById('ex-dificultad').value;
+  if(!materia){alert('Escribe el nombre de la materia.');return;}
+  const contenido=temasInput||'Materia: '+materia;
+  const btn=document.getElementById('ex-gen-btn');
+  const loader=document.getElementById('ex-gen-loader');
+  btn.style.display='none'; loader.style.display='flex';
+  const loaderMsgs=['Analizando el temario...','Generando preguntas...','Añadiendo opciones...','Calibrando dificultad...','Preparando el examen...'];
+  let mi=0; const li=setInterval(()=>{mi=(mi+1)%loaderMsgs.length;document.getElementById('ex-gen-loader-text').textContent=loaderMsgs[mi];},1000);
+  try{
+    const prompt=`Eres un profesor experto en "${materia}". Genera un examen de simulación de exactamente ${numPreguntas} preguntas de opción múltiple basadas en este contenido.
+
+CONTENIDO / APUNTES:
+${contenido.substring(0,4000)}
+
+Responde SOLO con JSON válido sin markdown:
+{"preguntas":[{"pregunta":"...","opciones":["A)...","B)...","C)...","D)..."],"correcta":0,"tema":"...","explicacion":"..."}]}
+
+- correcta: índice 0-3 de la opción correcta.
+- opciones: 4 opciones plausibles con prefijos A) B) C) D).
+- tema: máximo 2 palabras.
+- explicacion: por qué es correcta la respuesta (1 oración).
+- dificultad general: ${dificultad}.
+- EXACTAMENTE ${numPreguntas} preguntas, variadas, que cubran diferentes temas.`;
+    const res=await callAI(prompt);
+    const parsed=JSON.parse(res);
+    QUIZ=parsed.preguntas||[];
+    clearInterval(li);
+    btn.style.display='block'; loader.style.display='none';
+    if(QUIZ.length===0) throw new Error('No se generaron preguntas');
+    startExam();
+  }catch(e){
+    clearInterval(li);
+    btn.style.display='block'; loader.style.display='none';
+    alert('Error generando el examen: '+e.message+'. Intenta de nuevo.');
+  }
+}
+
+function startExamFromCards(){
+  if(!fcCards.length){alert('No tienes flashcards guardadas. Crea algunas primero.');return;}
+  QUIZ=fcCards.map(c=>({
+    pregunta:c.front,
+    opciones:shuffle([c.correcta,...(c.incorrectas||[]).slice(0,3)]),
+    correcta:0, // will be recalculated
+    tema:c.tema,
+    explicacion:'La respuesta correcta es: '+c.correcta
+  }));
+  // Fix correcta index after shuffle
+  QUIZ.forEach((q,qi)=>{
+    const card=fcCards[qi];
+    q.correcta=q.opciones.indexOf(card.correcta);
+  });
+  QUIZ=shuffle(QUIZ).slice(0,Math.min(20,QUIZ.length));
+  startExam();
+}
+
+function startExam(){
+  exIdx=0;exAnswers={};exSecs=0;
+  document.getElementById('ex-config').style.display='none';
+  document.getElementById('ex-quiz').style.display='block';
+  document.getElementById('ex-result').style.display='none';
+  exRunning=true;
+  exTimer=setInterval(()=>{exSecs++;document.getElementById('ex-time').textContent=fmt(exSecs);},1000);
+  renderExQuestion();
+}
+
+function renderExQuestion(){
+  const q=QUIZ[exIdx];
+  document.getElementById('ex-counter').textContent=(exIdx+1)+' / '+QUIZ.length;
+  document.getElementById('ex-progress-fill').style.width=(((exIdx+1)/QUIZ.length)*100)+'%';
+  document.getElementById('ex-tema').textContent=q.tema||'General';
+  document.getElementById('ex-question').textContent=q.pregunta;
+  const cont=document.getElementById('ex-options');
+  cont.innerHTML='';
+  (q.opciones||[]).forEach((op,i)=>{
+    const div=document.createElement('div');
+    div.style.cssText='padding:14px 18px;border-radius:13px;border:2px solid var(--border);background:var(--card);cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s;font-size:14px;';
+    div.innerHTML=`<div style="width:26px;height:26px;border-radius:50%;background:rgba(38,42,69,.88);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${String.fromCharCode(65+i)}</div>${op}`;
+    div.onclick=()=>exSelect(i,div);
+    cont.appendChild(div);
+  });
+  const nb=document.getElementById('ex-next-btn');
+  nb.disabled=true;nb.style.opacity='.5';
+  nb.textContent=exIdx<QUIZ.length-1?'Siguiente →':'Terminar Examen';
+}
+
+function exSelect(i,el){
+  if(exAnswers[exIdx]!==undefined)return;
+  exAnswers[exIdx]=i;
+  document.querySelectorAll('#ex-options>div').forEach((d,idx)=>{
+    if(idx===i){d.style.border='2px solid var(--accent)';d.style.background='rgba(108,99,255,.15)';d.style.fontWeight='700';}
+  });
+  const nb=document.getElementById('ex-next-btn');
+  nb.disabled=false;nb.style.opacity='1';
+}
+
+function exNext(){
+  if(exIdx<QUIZ.length-1){exIdx++;renderExQuestion();}
+  else{clearInterval(exTimer);showExResult();}
+}
+
+function showExResult(){
+  document.getElementById('ex-quiz').style.display='none';
+  document.getElementById('ex-result').style.display='block';
+  const correct=QUIZ.filter((q,i)=>exAnswers[i]===q.correcta).length;
+  const pct=Math.round((correct/QUIZ.length)*100);
+  document.getElementById('ex-result-emoji').textContent=pct>=80?'🏆':pct>=60?'👍':'📚';
+  document.getElementById('ex-result-title').textContent=pct>=80?'¡Excelente!':pct>=60?'¡Bien hecho!':'Sigue practicando';
+  const pctEl=document.getElementById('ex-result-pct');
+  pctEl.textContent=pct+'%';
+  pctEl.style.color=pct>=80?'var(--green)':pct>=60?'var(--gold)':'var(--red)';
+  document.getElementById('ex-result-sub').textContent=correct+' de '+QUIZ.length+' correctas · '+fmt(exSecs);
+  const rev=document.getElementById('ex-review');
+  rev.innerHTML='';
+  QUIZ.forEach((q,i)=>{
+    const ok=exAnswers[i]===q.correcta;
+    const div=document.createElement('div');
+    div.className='ex-result-row '+(ok?'review-correct':'review-wrong');
+    div.innerHTML=`<div class="flex justify-between items-start mb-6"><span style="font-size:13px;font-weight:600;flex:1;margin-right:8px;">${q.pregunta}</span><span style="flex-shrink:0;">${ok?'✅':'❌'}</span></div>
+    ${!ok?`<div class="fs-12 color-muted mb-4">Tu respuesta: <span style="color:var(--red);">${q.opciones&&exAnswers[i]!==undefined?q.opciones[exAnswers[i]]:'—'}</span></div><div class="fs-12 color-muted mb-4">Correcta: <span style="color:var(--green);">${q.opciones?q.opciones[q.correcta]:'—'}</span></div>`:''}
+    ${q.explicacion?`<div style="margin-top:6px;padding:8px 12px;border-radius:8px;background:rgba(108,99,255,.1);font-size:12px;line-height:1.5;color:var(--muted);">💡 ${q.explicacion}</div>`:''}`;
+    rev.appendChild(div);
+  });
+  // Save to DB
+  dbInsert('examenes',{tipo:'normal',materia:document.getElementById('ex-materia').value||'General',correctas:correct,total:QUIZ.length,porcentaje:pct,tiempo:exSecs});
+}
+
+function resetExam(){
+  clearInterval(exTimer);exRunning=false;QUIZ=[];
+  document.getElementById('ex-result').style.display='none';
+  document.getElementById('ex-config').style.display='block';
+}
+
+
+/* ═══════════════════════════════
+   CALCULADORA
+═══════════════════════════════ */
+let calRows=[
+  {id:1,nombre:'Parcial 1',peso:25,cal:'75'},
+  {id:2,nombre:'Parcial 2',peso:25,cal:''},
+  {id:3,nombre:'Proyecto',peso:20,cal:'85'},
+  {id:4,nombre:'Tareas',peso:10,cal:'90'},
+  {id:5,nombre:'Final',peso:20,cal:''}
+];
+let calNextId=6;
+
+function getCalColor(v,min){return v>=min?'var(--green)':v>=min*.85?'var(--gold)':'var(--red)';}
+
+function calcRender(){
+  const cont=document.getElementById('cal-rows');
+  cont.innerHTML='';
+  calRows.forEach(row=>{
+    const div=document.createElement('div');
+    div.className='calc-row';
+    div.innerHTML=`
+      <input class="calc-name" value="${row.nombre}" oninput="calRows.find(r=>r.id==${row.id}).nombre=this.value;calcUpdate();" style="background:transparent;border:none;font-size:13px;color:var(--text);font-family:'Sora',sans-serif;"/>
+      <div style="display:flex;align-items:center;gap:3px;">
+        <input type="number" class="calc-input" min="0" max="100" value="${row.peso}" oninput="calRows.find(r=>r.id==${row.id}).peso=Number(this.value)||0;calcUpdate();" style="width:100%;"/>
+        <span class="color-muted fs-11">%</span>
+      </div>
+      <input type="number" class="calc-input" min="0" max="100" value="${row.cal}" placeholder="—" oninput="calRows.find(r=>r.id==${row.id}).cal=this.value;calcUpdate();" id="cal-cal-${row.id}"/>
+      <div class="del-btn" onclick="calDeleteRow(${row.id})">×</div>`;
+    cont.appendChild(div);
+  });
+  calcUpdate();
+}
+
+function calDeleteRow(id){calRows=calRows.filter(r=>r.id!==id);calcRender();}
+
+function calcAddRow(){
+  const nombre=document.getElementById('cal-new-name').value.trim();
+  const peso=Number(document.getElementById('cal-new-peso').value)||0;
+  if(!nombre)return;
+  calRows.push({id:calNextId++,nombre,peso,cal:''});
+  document.getElementById('cal-new-name').value='';
+  document.getElementById('cal-new-peso').value='';
+  calcRender();
+}
+
+function calcUpdate(){
+  const min=Number(document.getElementById('cal-min').value)||60;
+  const total=calRows.reduce((s,r)=>s+Number(r.peso||0),0);
+  const statusEl=document.getElementById('cal-peso-status');
+  statusEl.textContent=total===100?'✅ 100% del peso':'⚠️ Suma: '+total+'%';
+  statusEl.style.color=total===100?'var(--green)':'var(--red)';
+
+  const calificadas=calRows.filter(r=>r.cal!==''&&!isNaN(Number(r.cal)));
+  const pendientes=calRows.filter(r=>r.cal===''||isNaN(Number(r.cal)));
+  const pesoAplicado=calificadas.reduce((s,r)=>s+Number(r.peso),0);
+  const pesoFaltante=pendientes.reduce((s,r)=>s+Number(r.peso),0);
+  const calActual=calificadas.reduce((s,r)=>s+(Number(r.cal)*Number(r.peso)/100),0);
+
+  // Color cal actual
+  const col=getCalColor(calActual,min);
+  document.getElementById('cal-actual-val').textContent=calActual.toFixed(1);
+  document.getElementById('cal-actual-val').style.color=col;
+  document.getElementById('cal-actual-sub').textContent='con '+pesoAplicado+'% del peso calificado';
+  document.getElementById('cal-bar').style.width=Math.min(calActual,100)+'%';
+  document.getElementById('cal-bar').style.background=col;
+  document.getElementById('cal-min-mark').style.left=min+'%';
+  document.getElementById('cal-min-label').textContent='↑ mín. '+min;
+
+  // Peso bars
+  document.getElementById('cal-peso-bar-done').style.width=pesoAplicado+'%';
+  document.getElementById('cal-peso-bar-left').style.width=pesoFaltante+'%';
+  document.getElementById('cal-pct-done').textContent=pesoAplicado+'%';
+  document.getElementById('cal-pct-left').textContent=pesoFaltante+'%';
+
+  // Necesitas
+  const needCard=document.getElementById('cal-need-card');
+  const needLabel=document.getElementById('cal-need-label');
+  const needVal=document.getElementById('cal-need-val');
+  const needSub=document.getElementById('cal-need-sub');
+  const needBadge=document.getElementById('cal-need-badge');
+
+  if(pesoFaltante===0){
+    needLabel.textContent='RESULTADO FINAL';
+    const aprobado=calActual>=min;
+    needVal.textContent=aprobado?'🎓':'📉';
+    needVal.style.fontSize='48px';
+    needSub.textContent='Calificación final: '+calActual.toFixed(1);
+    const msg=aprobado?'🎉 ¡Materia acreditada!':'❌ No acreditaste la materia';
+    const c=aprobado?'var(--green)':'var(--red)';
+    needBadge.textContent=msg;
+    needBadge.style.background=aprobado?'rgba(61,255,176,.15)':'rgba(255,94,126,.15)';
+    needBadge.style.border='1px solid '+(aprobado?'rgba(61,255,176,.3)':'rgba(255,94,126,.3)');
+    needBadge.style.color=c;
+    needCard.style.borderColor=c+'66';
+  } else {
+    needVal.style.fontSize='52px';
+    needLabel.textContent='NECESITAS EN EL '+pesoFaltante+'% RESTANTE';
+    const necesaria=(min-calActual)/(pesoFaltante/100);
+    if(necesaria>100){
+      needVal.textContent='😔';needVal.style.fontSize='48px';
+      needSub.textContent='Necesitarías '+necesaria.toFixed(1)+' pts — imposible';
+      needBadge.textContent='Matemáticamente imposible';
+      needBadge.style.background='rgba(255,94,126,.15)';
+      needBadge.style.border='1px solid rgba(255,94,126,.3)';
+      needBadge.style.color='var(--red)';
+      needCard.style.borderColor='rgba(255,94,126,.4)';
+    } else {
+      needVal.textContent=Math.ceil(necesaria);
+      needSub.textContent='puntos (redondeado al alza)';
+      const sc=necesaria<=65?'var(--green)':necesaria<=80?'var(--gold)':'var(--red)';
+      const msg=necesaria<=65?'🟢 ¡Muy alcanzable!':necesaria<=80?'🟡 Con esfuerzo lo logras':'🔴 Necesitas dar el máximo';
+      needVal.style.color=sc;
+      needBadge.textContent=msg;
+      needBadge.style.color=sc;
+      needBadge.style.background=sc==='var(--green)'?'rgba(61,255,176,.12)':sc==='var(--gold)'?'rgba(245,197,66,.12)':'rgba(255,94,126,.12)';
+      needBadge.style.border='1px solid '+(sc==='var(--green)'?'rgba(61,255,176,.3)':sc==='var(--gold)'?'rgba(245,197,66,.3)':'rgba(255,94,126,.3)');
+      needCard.style.borderColor=sc==='var(--green)'?'rgba(61,255,176,.35)':sc==='var(--gold)'?'rgba(245,197,66,.35)':'rgba(255,94,126,.35)';
+    }
+  }
+
+  // Proyecciones
+  const projCard=document.getElementById('cal-proj-card');
+  projCard.style.display=pesoFaltante>0?'block':'none';
+  if(pesoFaltante>0){
+    const rows=[
+      {label:'Si sacas 100 en todo',val:calActual+(pesoFaltante/100)*100,emoji:'🚀'},
+      {label:'Si sacas 70 en promedio',val:calActual+(pesoFaltante/100)*70,emoji:'📘'},
+      {label:'Si sacas 50 en promedio',val:calActual+(pesoFaltante/100)*50,emoji:'😬'},
+    ];
+    document.getElementById('cal-proj-rows').innerHTML=rows.map(r=>`
+      <div class="flex justify-between items-center" style="padding:9px 0;border-bottom:1px solid rgba(38,42,69,.3);">
+        <span class="fs-13 color-muted">${r.emoji} ${r.label}</span>
+        <span style="font-weight:800;font-size:16px;color:${getCalColor(r.val,min)};">${r.val.toFixed(1)} ${r.val>=min?'✅':'❌'}</span>
+      </div>`).join('');
+  }
+  // Update cal input colors
+  calRows.forEach(row=>{
+    const el=document.getElementById('cal-cal-'+row.id);
+    if(el&&row.cal!==''&&!isNaN(Number(row.cal))) el.style.color=getCalColor(Number(row.cal),min);
+  });
+}
+
+calcRender();
+
+/* ═══════════════════════════════
+   APUNTES
+═══════════════════════════════ */
+const NOTE_COLORS=['#6C63FF','#F5C542','#3DFFB0','#FF5E7E','#00CFFF'];
+let notes=[
+  {id:1,titulo:'Resumen de Biología',contenido:'La fotosíntesis ocurre en los cloroplastos...',color:'#6C63FF',fecha:'2026-03-07'},
+  {id:2,titulo:'Fórmulas de Física',contenido:'F=ma, E=mc², P=F/A, v=d/t',color:'#F5C542',fecha:'2026-03-06'}
+];
+let notesNextId=3,noteSelected=null;
+
+function renderNoteColors(current){
+  const cont=document.getElementById('note-colors');
+  cont.innerHTML='';
+  NOTE_COLORS.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='color-swatch';
+    d.style.background=c;
+    d.style.border=c===current?'2px solid white':'2px solid transparent';
+    d.onclick=()=>{if(noteSelected){noteSelected.color=c;renderNoteColors(c);}};
+    cont.appendChild(d);
+  });
+}
+
+function renderNotesList(){
+  const cont=document.getElementById('notes-list');
+  cont.innerHTML='';
+  notes.forEach(n=>{
+    const div=document.createElement('div');
+    div.className='note-card';
+    div.style.borderColor=noteSelected&&noteSelected.id===n.id?n.color:'var(--border)';
+    div.innerHTML=`<div class="flex items-center gap-8 mb-6"><div class="color-dot" style="background:${n.color};"></div><span style="font-weight:700;font-size:14px;">${n.titulo}</span></div>
+    <p style="color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.contenido||'Sin contenido'}</p>
+    <div style="font-size:11px;color:var(--muted);margin-top:5px;">${n.fecha}</div>`;
+    div.onclick=()=>selectNote(n.id);
+    cont.appendChild(div);
+  });
+}
+
+function selectNote(id){
+  noteSelected={...notes.find(n=>n.id===id)};
+  document.getElementById('note-placeholder').style.display='none';
+  const ea=document.getElementById('note-edit-area');
+  ea.style.display='flex';
+  document.getElementById('note-title-input').value=noteSelected.titulo;
+  document.getElementById('note-body').value=noteSelected.contenido;
+  renderNoteColors(noteSelected.color);
+  renderNotesList();
+}
+
+function addNote(){
+  const n={id:notesNextId++,titulo:'Nueva nota',contenido:'',color:NOTE_COLORS[0],fecha:new Date().toISOString().slice(0,10)};
+  notes.push(n);renderNotesList();selectNote(n.id);
+}
+
+function saveNote(){
+  if(!noteSelected)return;
+  noteSelected.titulo=document.getElementById('note-title-input').value;
+  noteSelected.contenido=document.getElementById('note-body').value;
+  const idx=notes.findIndex(n=>n.id===noteSelected.id);
+  if(idx>=0)notes[idx]={...noteSelected};
+  document.getElementById('note-edit-area').style.display='none';
+  document.getElementById('note-placeholder').style.display='flex';
+  noteSelected=null;renderNotesList();
+}
+
+function deleteNote(){
+  if(!noteSelected)return;
+  notes=notes.filter(n=>n.id!==noteSelected.id);
+  noteSelected=null;
+  document.getElementById('note-edit-area').style.display='none';
+  document.getElementById('note-placeholder').style.display='flex';
+  renderNotesList();
+}
+
+renderNotesList();
+
+/* ── Notes Supabase sync ── */
+async function notesInit(){
+  const dbNotes=await dbSelect('apuntes');
+  if(dbNotes&&dbNotes.length>0){
+    notes=dbNotes.map(n=>({id:n.id,titulo:n.titulo||'Sin título',contenido:n.contenido||'',color:n.color||NOTE_COLORS[0],fecha:(n.created_at||'').slice(0,10)}));
+    renderNotesList();
+  }
+}
+const _origSaveNote=saveNote;
+saveNote=async function(){
+  if(!noteSelected)return;
+  noteSelected.titulo=document.getElementById('note-title-input').value;
+  noteSelected.contenido=document.getElementById('note-body').value;
+  const idx=notes.findIndex(n=>n.id===noteSelected.id);
+  if(idx>=0)notes[idx]={...noteSelected};
+  if(noteSelected.id&&String(noteSelected.id).length>10){
+    await dbUpdate('apuntes',noteSelected.id,{titulo:noteSelected.titulo,contenido:noteSelected.contenido,color:noteSelected.color});
+  } else {
+    const saved=await dbInsert('apuntes',{titulo:noteSelected.titulo,contenido:noteSelected.contenido,color:noteSelected.color,fecha:noteSelected.fecha});
+    if(saved&&saved[0]&&idx>=0) notes[idx].id=saved[0].id;
+  }
+  document.getElementById('note-edit-area').style.display='none';
+  document.getElementById('note-placeholder').style.display='flex';
+  noteSelected=null;renderNotesList();
+};
+const _origDeleteNote=deleteNote;
+deleteNote=async function(){
+  if(!noteSelected)return;
+  if(String(noteSelected.id).length>10) await dbDelete('apuntes',noteSelected.id);
+  notes=notes.filter(n=>n.id!==noteSelected.id);
+  noteSelected=null;
+  document.getElementById('note-edit-area').style.display='none';
+  document.getElementById('note-placeholder').style.display='flex';
+  renderNotesList();
+};
+notesInit();
+
+/* ═══════════════════════════════
+   POMODORO
+═══════════════════════════════ */
+const DURATIONS={work:25*60,short:5*60,long:15*60};
+let pomoMode='work',pomoSecs=25*60,pomoRunning=false,pomoTimer=null,pomoCycles=0;
+const CIRC=2*Math.PI*100;
+
+function pomoUpdate(){
+  const arc=document.getElementById('pomo-arc');
+  const pct=(DURATIONS[pomoMode]-pomoSecs)/DURATIONS[pomoMode];
+  arc.style.strokeDashoffset=CIRC-(pct*CIRC);
+  arc.style.stroke=pomoMode==='work'?'var(--accent)':'var(--green)';
+  document.getElementById('pomo-display').textContent=fmt(pomoSecs);
+  document.getElementById('pomo-label').textContent=pomoMode==='work'?'🎯 Enfocado':'☕ Descansando';
+}
+
+function pomoSwitch(mode){
+  clearInterval(pomoTimer);pomoRunning=false;
+  pomoMode=mode;pomoSecs=DURATIONS[mode];
+  document.getElementById('pomo-toggle').textContent='▶ Iniciar';
+  document.getElementById('pomo-toggle').style.background='var(--accent)';
+  document.getElementById('pomo-toggle').style.animation='none';
+  ['work','short','long'].forEach(m=>{document.getElementById('pomo-btn-'+m).classList.toggle('active',m===mode);});
+  pomoUpdate();
+}
+
+function pomoToggle(){
+  pomoRunning=!pomoRunning;
+  const btn=document.getElementById('pomo-toggle');
+  if(pomoRunning){
+    btn.textContent='⏸ Pausar';btn.style.background='var(--red)';btn.style.animation='pulse 2s infinite';
+    pomoTimer=setInterval(()=>{
+      pomoSecs--;
+      if(pomoSecs<=0){
+        clearInterval(pomoTimer);pomoRunning=false;
+        btn.textContent='▶ Iniciar';btn.style.background='var(--accent)';btn.style.animation='none';
+        if(pomoMode==='work'){pomoCycles++;document.getElementById('pomo-cycles').textContent=pomoCycles;document.getElementById('pomo-minutes').textContent=pomoCycles*25;}
+        pomoSecs=0;
+      }
+      pomoUpdate();
+    },1000);
+  } else {
+    clearInterval(pomoTimer);
+    btn.textContent='▶ Iniciar';btn.style.background='var(--accent)';btn.style.animation='none';
+  }
+}
+
+function pomoReset(){clearInterval(pomoTimer);pomoRunning=false;pomoSecs=DURATIONS[pomoMode];const btn=document.getElementById('pomo-toggle');btn.textContent='▶ Iniciar';btn.style.background='var(--accent)';btn.style.animation='none';pomoUpdate();}
+
+pomoUpdate();
+
+/* ═══════════════════════════════════════════
+   EXTRAORDINARIO — AI-POWERED STUDY MODE
+═══════════════════════════════════════════ */
+let extTopics=[], extNivel='bajo', extPlanData=null, extTaskStates={};
+let extAIFlashcards=[], extAIExamen=[], extAIEjercicios=[], extAIResumen='';
+let extFcIdx=0, extFcPhase='question', extFcOptions=[], extFcScoreG=0, extFcScoreB=0;
+let extExIdx=0, extExAnswers={}, extExTimer=null, extExSecs=0;
+let extEjIdx=0;
+let extCurrentTab='plan';
+
+// ── Nivel ──
+function extSetNivel(n){
+  extNivel=n;
+  ['bajo','medio','alto'].forEach(l=>document.getElementById('ext-nivel-'+l).classList.toggle('active',l===n));
+}
+
+// ── Topics ──
+function extAddTopic(){
+  const inp=document.getElementById('ext-topic-input');
+  const v=inp.value.trim(); if(!v)return;
+  extTopics.push(v); inp.value=''; renderExtTopics();
+}
+function extBulkAdd(){
+  const bulk=document.getElementById('ext-temario-bulk').value.trim(); if(!bulk)return;
+  bulk.split('\n').map(l=>l.replace(/^[\d\.\-\*\•]+\s*/,'').trim()).filter(l=>l.length>2).forEach(l=>extTopics.push(l));
+  document.getElementById('ext-temario-bulk').value=''; renderExtTopics();
+}
+function extRemoveTopic(i){extTopics.splice(i,1);renderExtTopics();}
+function extClearTopics(){extTopics=[];renderExtTopics();}
+function renderExtTopics(){
+  const cont=document.getElementById('ext-topics-container');
+  const empty=document.getElementById('ext-topics-empty');
+  document.getElementById('ext-topic-count').textContent=extTopics.length;
+  if(!extTopics.length){cont.innerHTML='';cont.appendChild(empty);return;}
+  cont.innerHTML='';
+  extTopics.forEach((t,i)=>{
+    const chip=document.createElement('span');
+    chip.className='ext-topic-chip';
+    chip.innerHTML=`${t} <button onclick="extRemoveTopic(${i})">×</button>`;
+    cont.appendChild(chip);
+  });
+}
+
+// ── Tab switching ──
+function extTab(tab){
+  extCurrentTab=tab;
+  ['plan','flashcards','ejercicios','examen','resumen'].forEach(t=>{
+    document.getElementById('ext-tab-'+t).style.display=t===tab?'block':'none';
+    document.getElementById('extab-'+t).classList.toggle('active',t===tab);
+  });
+  if(tab==='flashcards'&&extAIFlashcards.length>0) renderExtFlashcards();
+  if(tab==='ejercicios'&&extAIEjercicios.length>0) renderExtEjercicios();
+  if(tab==='examen'&&extAIExamen.length>0) renderExtExamen();
+  if(tab==='resumen'&&extAIResumen) renderExtResumen();
+}
+
+// ── Main generate ──
+function extGenerate(){
+  const materia=document.getElementById('ext-materia').value.trim();
+  const fecha=document.getElementById('ext-fecha').value;
+  if(!materia){alert('Por favor escribe el nombre de la materia.');return;}
+  if(!fecha){alert('Por favor selecciona la fecha del extraordinario.');return;}
+  if(!extTopics.length){alert('Por favor agrega al menos un tema del temario.');return;}
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const exDate=new Date(fecha+'T00:00:00');
+  if(Math.round((exDate-hoy)/(86400000))<1){alert('La fecha debe ser al menos mañana.');return;}
+  document.getElementById('ext-step1').classList.remove('active');
+  document.getElementById('ext-step2').classList.add('active');
+  document.getElementById('ext-loader').style.display='flex';
+  document.getElementById('ext-main-content').style.display='none';
+  extTaskStates={}; extAIFlashcards=[]; extAIExamen=[]; extAIEjercicios=[]; extAIResumen='';
+  extFcScoreG=0; extFcScoreB=0; extFcIdx=0; extExIdx=0; extEjIdx=0; extExAnswers={};
+  runExtAI(materia,fecha);
+}
+
+function extReset(){
+  document.getElementById('ext-step1').classList.add('active');
+  document.getElementById('ext-step2').classList.remove('active');
+}
+function extRegenerate(){
+  document.getElementById('ext-main-content').style.display='none';
+  document.getElementById('ext-loader').style.display='flex';
+  const materia=document.getElementById('ext-plan-title').textContent;
+  extAIFlashcards=[]; extAIExamen=[]; extAIEjercicios=[]; extAIResumen='';
+  extFcScoreG=0; extFcScoreB=0; extFcIdx=0; extExIdx=0; extEjIdx=0; extExAnswers={};
+  const fecha=document.getElementById('ext-fecha').value;
+  runExtAI(materia,fecha);
+}
+
+// ── AI orchestrator ──
+async function runExtAI(materia, fecha){
+  const msgs=[
+    'Analizando el temario de '+materia+'...',
+    'Generando plan de estudio personalizado...',
+    'Creando flashcards con la IA...',
+    'Diseñando ejercicios de práctica...',
+    'Preparando examen de práctica...',
+    'Generando resúmenes por tema...',
+    'Finalizando todos los recursos...'
+  ];
+  let mi=0;
+  const interval=setInterval(()=>{mi=(mi+1)%msgs.length;document.getElementById('ext-loader-text').textContent=msgs[mi];},1200);
+
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const exDate=new Date(fecha+'T00:00:00');
+  const diasTotal=Math.round((exDate-hoy)/86400000);
+  const horasDia=Number(document.getElementById('ext-horas-range').value);
+  const topicsStr=extTopics.join(', ');
+  const nivel=extNivel;
+
+  try{
+    // Run 4 AI calls in parallel for speed
+    const [flashRes, examRes, ejRes, resumenRes]=await Promise.all([
+      callAI(`Eres un profesor experto en "${materia}". Genera exactamente 8 flashcards de estudio sobre estos temas: ${topicsStr}.
+Responde SOLO con JSON válido sin markdown, con este formato exacto:
+{"flashcards":[{"pregunta":"...","correcta":"...","incorrectas":["...","..."],"tema":"..."}]}
+- Cada flashcard debe tener pregunta clara, 1 respuesta correcta y 2 incorrectas plausibles.
+- Los temas deben ser concisos (max 2 palabras). Nivel: ${nivel}.`),
+
+      callAI(`Eres un profesor experto en "${materia}". Crea exactamente 8 preguntas de opción múltiple para un examen extraordinario sobre: ${topicsStr}.
+Responde SOLO con JSON válido sin markdown:
+{"preguntas":[{"pregunta":"...","opciones":["...","...","...","..."],"correcta":0,"tema":"...","explicacion":"..."}]}
+- correcta es el índice (0-3) de la opción correcta en el array opciones.
+- Incluye una breve explicación de por qué es correcta. Nivel: ${nivel}.`),
+
+      callAI(`Eres un profesor de "${materia}". Genera 5 ejercicios prácticos de desarrollo para estudiar estos temas: ${topicsStr}.
+Responde SOLO con JSON válido sin markdown:
+{"ejercicios":[{"titulo":"...","enunciado":"...","pistas":["...","..."],"solucion":"...","tema":"...","dificultad":"fácil|media|difícil"}]}
+- El enunciado debe ser un problema o pregunta de desarrollo real, no de opción múltiple.
+- Incluye 2 pistas útiles y una solución completa. Nivel del alumno: ${nivel}.`),
+
+      callAI(`Eres un profesor de "${materia}". Genera un resumen de estudio conciso pero completo de los siguientes temas para un examen extraordinario: ${topicsStr}.
+Responde SOLO con JSON válido sin markdown:
+{"resumen":{"intro":"párrafo introductorio breve","temas":[{"nombre":"...","puntos_clave":["...","...","..."],"concepto_importante":"..."}],"consejo_final":"..."}}
+- Para cada tema del temario incluye un objeto con nombre, 3 puntos clave y el concepto más importante a recordar. Nivel: ${nivel}.`)
+    ]);
+
+    clearInterval(interval);
+
+    // Parse results
+    try{extAIFlashcards=JSON.parse(flashRes).flashcards||[];}catch(e){extAIFlashcards=makeFallbackCards(topicsStr);}
+    try{extAIExamen=JSON.parse(examRes).preguntas||[];}catch(e){extAIExamen=makeFallbackExam(topicsStr);}
+    try{extAIEjercicios=JSON.parse(ejRes).ejercicios||[];}catch(e){extAIEjercicios=makeFallbackEj(topicsStr);}
+    try{extAIResumen=JSON.parse(resumenRes).resumen||null;}catch(e){extAIResumen=null;}
+
+    // Build study plan
+    extPlanData=buildExtPlan(materia,diasTotal,horasDia,extTopics,nivel,exDate);
+
+    // Render everything
+    renderExtHeader(materia,diasTotal,extTopics.length,diasTotal*horasDia,nivel);
+    renderExtPlan(extPlanData);
+    renderExtFlashcards();
+    renderExtEjercicios();
+    renderExtExamen();
+    renderExtResumen();
+
+    document.getElementById('ext-loader').style.display='none';
+    document.getElementById('ext-main-content').style.display='block';
+    extTab('plan');
+
+  }catch(err){
+    clearInterval(interval);
+    document.getElementById('ext-loader-text').textContent='Error al conectar con la IA. Usando contenido de ejemplo.';
+    extAIFlashcards=makeFallbackCards(topicsStr);
+    extAIExamen=makeFallbackExam(topicsStr);
+    extAIEjercicios=makeFallbackEj(topicsStr);
+    extAIResumen=null;
+    extPlanData=buildExtPlan(materia,diasTotal,horasDia,extTopics,nivel,exDate);
+    renderExtHeader(materia,diasTotal,extTopics.length,diasTotal*horasDia,nivel);
+    renderExtPlan(extPlanData);
+    renderExtFlashcards();
+    renderExtEjercicios();
+    renderExtExamen();
+    renderExtResumen();
+    document.getElementById('ext-loader').style.display='none';
+    document.getElementById('ext-main-content').style.display='block';
+    extTab('plan');
+  }
+}
+
+// ── Anthropic API call ──
+async function callAI(prompt){
+  const res=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',
+      max_tokens:1000,
+      messages:[{role:'user',content:prompt}]
+    })
+  });
+  if(!res.ok)throw new Error('API error '+res.status);
+  const data=await res.json();
+  let text=(data.content||[]).map(b=>b.text||'').join('');
+  // Strip markdown code fences if present
+  text=text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+  return text;
+}
+
+// ── Fallback data ──
+function makeFallbackCards(topics){
+  return topics.split(',').slice(0,5).map((t,i)=>({
+    pregunta:'¿Qué es o cómo se define: '+t.trim()+'?',
+    correcta:'Concepto principal de '+t.trim()+' según el temario.',
+    incorrectas:['Definición incorrecta A de '+t.trim(),'Definición incorrecta B de '+t.trim()],
+    tema:t.trim().substring(0,20)
+  }));
+}
+function makeFallbackExam(topics){
+  return topics.split(',').slice(0,5).map((t,i)=>({
+    pregunta:'¿Cuál es la característica principal de: '+t.trim()+'?',
+    opciones:['Opción A correcta','Opción B incorrecta','Opción C incorrecta','Opción D incorrecta'],
+    correcta:0,tema:t.trim().substring(0,20),
+    explicacion:'La opción A describe correctamente el concepto de '+t.trim()+'.'
+  }));
+}
+function makeFallbackEj(topics){
+  return topics.split(',').slice(0,3).map((t,i)=>({
+    titulo:'Ejercicio sobre '+t.trim(),
+    enunciado:'Explica con tus propias palabras el concepto de "'+t.trim()+'" y da un ejemplo de su aplicación.',
+    pistas:['Piensa en la definición básica del concepto.','Busca un ejemplo de la vida cotidiana.'],
+    solucion:'Solución: El concepto de '+t.trim()+' se refiere a... [desarrolla según tus notas y el temario].',
+    tema:t.trim().substring(0,20),dificultad:'media'
+  }));
+}
+
+// ── Header render ──
+function renderExtHeader(materia,dias,temas,horas,nivel){
+  document.getElementById('ext-plan-title').textContent=materia;
+  document.getElementById('ext-plan-subtitle').textContent='Nivel: '+{bajo:'Bajo 😰',medio:'Medio 😐',alto:'Alto 😊'}[nivel]+' · IA generó flashcards, ejercicios y examen personalizados';
+  document.getElementById('ext-dias-total').textContent=dias;
+  document.getElementById('ext-temas-total').textContent=temas;
+  document.getElementById('ext-horas-total').textContent=horas;
+}
+
+// ── Study plan ──
+function buildExtPlan(materia,diasTotal,horasDia,topics,nivel,exDate){
+  const diasEstudio=Math.max(1,diasTotal-1);
+  const order={alta:0,media:1,baja:2};
+  const pMap={bajo:['alta','alta','media','baja'],medio:['alta','media','baja','baja'],alto:['media','baja','baja','baja']};
+  const tMap={alta:1.5,media:1.0,baja:0.5};
+  const enriched=topics.map((t,i)=>{const p=pMap[nivel][i%pMap[nivel].length];return{name:t,priority:p,hours:tMap[p]};}).sort((a,b)=>order[a.priority]-order[b.priority]);
+  const wDays=['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const mNames=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const today=new Date();today.setHours(0,0,0,0);
+  let queue=[...enriched];
+  const days=[];
+  for(let d=0;d<diasEstudio&&queue.length>0;d++){
+    const date=new Date(today);date.setDate(today.getDate()+d);
+    const isWeekend=date.getDay()===0||date.getDay()===6;
+    const limit=horasDia+(isWeekend?1:0);
+    const tasks=[];let used=0;
+    while(queue.length&&used<limit){
+      const t=queue[0];
+      if(used+t.hours<=limit+.5){tasks.push({...t,type:'tema'});used+=t.hours;queue.shift();}
+      else{const r=limit-used;if(r>=.5){tasks.push({name:'Repaso rápido',priority:'media',hours:r,type:'repaso'});used+=r;}break;}
+    }
+    if(d>0&&d%3===0&&used<limit)tasks.push({name:'Repaso acumulado de temas vistos',priority:'alta',hours:Math.min(1,limit-used),type:'repaso'});
+    days.push({num:d+1,date,label:wDays[date.getDay()]+' '+date.getDate()+' '+mNames[date.getMonth()],isWeekend,tasks,horasUsadas:Math.round(tasks.reduce((s,t)=>s+t.hours,0)*10)/10});
+  }
+  if(queue.length>0)queue.forEach(t=>days[days.length-1]&&days[days.length-1].tasks.push({...t,type:'tema'}));
+  const fd=new Date(today);fd.setDate(today.getDate()+diasTotal-1);
+  days.push({num:diasTotal,date:fd,label:wDays[fd.getDay()]+' '+fd.getDate()+' '+mNames[fd.getMonth()]+' — DÍA DEL EXAMEN',isExamDay:true,tasks:[
+    {name:'Repaso general de todos los temas',priority:'alta',hours:Math.min(horasDia,2),type:'repaso'},
+    {name:'Práctica con el examen de IA generado',priority:'alta',hours:1,type:'practica'},
+    {name:'Revisión de flashcards difíciles',priority:'media',hours:.5,type:'repaso'},
+    {name:'Descanso y preparación mental',priority:'baja',hours:.5,type:'descanso'}
+  ],horasUsadas:Math.min(horasDia,4)});
+  const totalTareas=days.reduce((s,d)=>s+d.tasks.length,0);
+  return{materia,dias:days,diasTotal,temas:topics.length,horasTotales:diasEstudio*horasDia,nivel,totalTareas};
+}
+
+function renderExtPlan(plan){
+  document.getElementById('ext-tareas-total').textContent=plan.totalTareas;
+  document.getElementById('ext-tareas-done').textContent=Object.values(extTaskStates).filter(Boolean).length;
+  const tips={bajo:['🚨 Nivel bajo: empieza por los temas con prioridad ALTA sin saltarte nada.','🃏 Usa las flashcards generadas por IA para repasar conceptos clave rápidamente.','⏱ Aplica la técnica Pomodoro: 25 min estudio, 5 descanso.'],
+    medio:['📌 Enfócate en los temas que no dominas completamente antes de repasar los fáciles.','🧪 Practica los ejercicios de IA después de estudiar cada tema.','✅ Haz el examen de práctica al menos 2 veces antes del día real.'],
+    alto:['🎯 Concéntrate en los detalles y en practicar el examen de IA en condiciones reales.','🔁 Usa las flashcards para identificar puntos ciegos que creías dominar.','⚡ Dedica más tiempo a los temas con mayor peso en el examen.']};
+  const banner=document.getElementById('ext-urgency-banner');
+  banner.style.display='block';
+  document.getElementById('ext-urgency-tips').innerHTML='<ul style="padding-left:18px;list-style:disc;">'+tips[plan.nivel].map(t=>'<li style="margin-bottom:6px;">'+t+'</li>').join('')+'</ul>';
+  const cont=document.getElementById('ext-days-container');cont.innerHTML='';
+  plan.dias.forEach((day,di)=>{
+    const nc=day.isExamDay?'var(--red)':day.isWeekend?'var(--gold)':'var(--accent)';
+    const nb=day.isExamDay?'rgba(255,94,126,.2)':day.isWeekend?'rgba(245,197,66,.12)':'rgba(108,99,255,.18)';
+    const el=document.createElement('div');el.className='plan-day';
+    if(day.isExamDay)el.style.borderColor='rgba(255,94,126,.45)';
+    el.innerHTML=`<div class="plan-day-header" onclick="extToggleDay('extday-${di}','extchev-${di}')">
+      <div class="day-num" style="background:${nb};color:${nc};">${day.num}</div>
+      <div style="flex:1;"><div style="font-weight:700;font-size:14px;">${day.label}</div>
+        <div class="fs-12 color-muted">${day.tasks.length} tareas · ${day.horasUsadas} hrs</div></div>
+      ${day.isExamDay?'<span class="day-tag" style="background:rgba(255,94,126,.18);color:var(--red);">🚨 Examen</span>':day.isWeekend?'<span class="day-tag" style="background:rgba(245,197,66,.12);color:var(--gold);">Fin de semana</span>':''}
+      <span style="color:var(--muted);font-size:18px;margin-left:8px;" id="extchev-${di}">›</span></div>
+    <div class="plan-day-body" id="extday-${di}">
+      ${day.tasks.map((task,ti)=>{
+        const tid='exttask-'+di+'-'+ti;
+        const icon=task.type==='repaso'?'🔁':task.type==='practica'?'🧪':task.type==='descanso'?'😴':'📖';
+        const badge=task.priority?`<span class="urgency-badge urgency-${task.priority}">${task.priority.toUpperCase()}</span>`:'';
+        return`<div class="plan-task" id="extrow-${tid}"><input type="checkbox" id="${tid}" onchange="extCheck('${tid}','${di}-${ti}')"/><label for="${tid}" style="flex:1;">${icon} ${task.name}<span class="color-muted fs-12"> · ${task.hours}h</span></label>${badge}</div>`;
+      }).join('')}
+      ${day.isExamDay?`<div style="margin-top:12px;padding:10px 14px;border-radius:10px;background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);font-size:13px;">
+        💡 <strong>Tip:</strong> Haz el <button onclick="extTab('examen')" style="background:none;border:none;color:var(--accent);font-weight:700;cursor:pointer;font-family:inherit;">Examen de IA →</button> como práctica hoy.
+      </div>`:''}
+    </div>`;
+    cont.appendChild(el);
+    if(di<2){const b=document.getElementById('extday-'+di);const c=document.getElementById('extchev-'+di);if(b){b.classList.add('open');}if(c)c.textContent='⌄';}
+  });
+  updateExtProgress();
+}
+
+function extToggleDay(bodyId,chevId){
+  const b=document.getElementById(bodyId);const c=document.getElementById(chevId);
+  const open=b.classList.toggle('open');if(c)c.textContent=open?'⌄':'›';
+}
+function extCheck(taskId,key){
+  const cb=document.getElementById(taskId);const row=document.getElementById('extrow-'+taskId);
+  extTaskStates[key]=cb.checked;
+  if(cb.checked)row.classList.add('done');else row.classList.remove('done');
+  updateExtProgress();
+}
+function updateExtProgress(){
+  if(!extPlanData)return;
+  const done=Object.values(extTaskStates).filter(Boolean).length;
+  const total=extPlanData.totalTareas;
+  document.getElementById('ext-tareas-done').textContent=done;
+  document.getElementById('ext-progress-overall').style.width=(total?Math.round(done/total*100):0)+'%';
+}
+
+/* ── FLASHCARDS IA ── */
+function renderExtFlashcards(){
+  const area=document.getElementById('ext-fc-area');
+  if(!extAIFlashcards.length){area.innerHTML='<p class="color-muted fs-13">No se generaron flashcards. Intenta regenerar.</p>';return;}
+  extFcIdx=0;extFcPhase='question';extFcScoreG=0;extFcScoreB=0;
+  area.innerHTML=`
+    <div style="max-width:580px;margin:0 auto;">
+      <div class="flex justify-between items-center mb-12">
+        <div class="flex gap-8">
+          <span class="score-good" id="extfc-good">✅ 0</span>
+          <span class="score-bad" id="extfc-bad">❌ 0</span>
+        </div>
+        <span style="font-family:'Space Mono';color:var(--muted);font-size:12px;" id="extfc-counter">1/${extAIFlashcards.length}</span>
+      </div>
+      <div style="background:var(--surface);height:5px;border-radius:3px;margin-bottom:20px;">
+        <div id="extfc-bar" style="background:var(--red);height:5px;border-radius:3px;width:${Math.round(1/extAIFlashcards.length*100)}%;transition:width .4s;"></div>
+      </div>
+      <div class="card text-center mb-14" style="padding:22px 22px 18px;border-color:rgba(255,94,126,.25);">
+        <span class="tag" style="background:rgba(255,94,126,.18);color:var(--red);margin-bottom:12px;display:inline-block;" id="extfc-tema">—</span>
+        <div style="font-size:19px;font-weight:700;line-height:1.5;" id="extfc-question">Cargando...</div>
+        <div class="fs-11 color-muted mt-10" id="extfc-hint">👇 Elige la respuesta correcta</div>
+      </div>
+      <div id="extfc-options" class="flex flex-col gap-10"></div>
+      <div id="extfc-feedback" style="display:none;margin-top:16px;padding:13px 17px;border-radius:13px;flex-direction:row;justify-content:space-between;align-items:center;" class="pop flex">
+        <span id="extfc-fbtxt" style="font-weight:700;font-size:14px;"></span>
+        <button class="btn-primary" style="padding:8px 18px;font-size:13px;" onclick="extFcNext()">Siguiente →</button>
+      </div>
+      <div id="extfc-finish" style="display:none;margin-top:16px;padding:20px;border-radius:14px;text-align:center;background:rgba(255,94,126,.08);border:1px solid rgba(255,94,126,.3);">
+        <div style="font-size:36px;">🎉</div>
+        <div style="font-weight:800;font-size:18px;margin:8px 0;">¡Flashcards completadas!</div>
+        <div class="fs-13 color-muted" id="extfc-final-score"></div>
+        <button class="btn-primary mt-12" style="background:linear-gradient(135deg,var(--red),#9b2335);" onclick="extFcRestart()">🔄 Repetir flashcards</button>
+      </div>
+    </div>`;
+  extFcLoadCard();
+}
+
+function extFcLoadCard(){
+  const c=extAIFlashcards[extFcIdx];
+  if(!c)return;
+  document.getElementById('extfc-tema').textContent=c.tema||'—';
+  document.getElementById('extfc-question').textContent=c.pregunta;
+  document.getElementById('extfc-counter').textContent=(extFcIdx+1)+'/'+extAIFlashcards.length;
+  document.getElementById('extfc-bar').style.width=Math.round((extFcIdx+1)/extAIFlashcards.length*100)+'%';
+  document.getElementById('extfc-hint').style.display='block';
+  document.getElementById('extfc-feedback').style.display='none';
+  document.getElementById('extfc-finish').style.display='none';
+  extFcPhase='question';
+  const opts=shuffle([{text:c.correcta,ok:true},...(c.incorrectas||[]).map(t=>({text:t,ok:false}))]);
+  extFcOptions=opts;
+  const cont=document.getElementById('extfc-options');cont.innerHTML='';
+  opts.forEach((o,i)=>{
+    const btn=document.createElement('button');btn.className='opt-btn';
+    btn.innerHTML=`<div class="opt-badge">${String.fromCharCode(65+i)}</div><span>${o.text}</span>`;
+    btn.onclick=()=>extFcSelect(i);cont.appendChild(btn);
+  });
+  document.getElementById('extfc-good').textContent='✅ '+extFcScoreG;
+  document.getElementById('extfc-bad').textContent='❌ '+extFcScoreB;
+}
+
+function extFcSelect(i){
+  if(extFcPhase!=='question')return;
+  extFcPhase='answered';
+  const ok=extFcOptions[i].ok;
+  if(ok)extFcScoreG++;else extFcScoreB++;
+  document.querySelectorAll('#extfc-options .opt-btn').forEach((b,idx)=>{
+    b.disabled=true;
+    if(extFcOptions[idx].ok){b.classList.add('correct');b.querySelector('.opt-badge').textContent='✓';}
+    else if(idx===i){b.classList.add('wrong');b.querySelector('.opt-badge').textContent='✗';}
+    else b.classList.add('dimmed');
+  });
+  document.getElementById('extfc-hint').style.display='none';
+  const fb=document.getElementById('extfc-feedback');
+  fb.style.display='flex';fb.style.background=ok?'rgba(61,255,176,.1)':'rgba(255,94,126,.1)';
+  fb.style.borderColor=ok?'rgba(61,255,176,.35)':'rgba(255,94,126,.35)';fb.style.border='1px solid '+(ok?'rgba(61,255,176,.35)':'rgba(255,94,126,.35)');
+  const txt=document.getElementById('extfc-fbtxt');txt.textContent=ok?'🎉 ¡Correcto!':'😕 Incorrecto — revisa la verde';txt.style.color=ok?'var(--green)':'var(--red)';
+  document.getElementById('extfc-good').textContent='✅ '+extFcScoreG;
+  document.getElementById('extfc-bad').textContent='❌ '+extFcScoreB;
+}
+
+function extFcNext(){
+  if(extFcIdx<extAIFlashcards.length-1){extFcIdx++;extFcLoadCard();}
+  else{
+    document.getElementById('extfc-options').innerHTML='';
+    document.getElementById('extfc-feedback').style.display='none';
+    document.getElementById('extfc-finish').style.display='block';
+    const pct=Math.round(extFcScoreG/extAIFlashcards.length*100);
+    document.getElementById('extfc-final-score').textContent=extFcScoreG+' de '+extAIFlashcards.length+' correctas ('+pct+'%)';
+  }
+}
+function extFcRestart(){extFcIdx=0;extFcScoreG=0;extFcScoreB=0;extFcPhase='question';extFcLoadCard();}
+
+/* ── EJERCICIOS IA ── */
+function renderExtEjercicios(){
+  const area=document.getElementById('ext-ej-area');
+  if(!extAIEjercicios.length){area.innerHTML='<p class="color-muted fs-13">No se generaron ejercicios. Intenta regenerar.</p>';return;}
+  const difColor={fácil:'var(--green)',media:'var(--gold)',difícil:'var(--red)'};
+  area.innerHTML=`
+    <div style="margin-bottom:16px;"><div style="font-weight:700;font-size:15px;margin-bottom:4px;">✏️ Ejercicios de Práctica</div>
+    <p class="fs-13 color-muted">Intenta resolver cada ejercicio antes de ver la solución. Usa las pistas si te atasca.</p></div>
+    <div class="flex flex-col gap-14">
+    ${extAIEjercicios.map((ej,i)=>`
+      <div class="card" style="border-color:rgba(108,99,255,.2);">
+        <div class="flex justify-between items-center mb-10">
+          <div class="flex items-center gap-10">
+            <div style="width:30px;height:30px;border-radius:50%;background:rgba(108,99,255,.2);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;color:var(--accent);">${i+1}</div>
+            <div><div style="font-weight:700;font-size:14px;">${ej.titulo}</div>
+              <span class="tag tag-accent fs-11 mt-4" style="display:inline-block;">${ej.tema||''}</span>
+            </div>
+          </div>
+          <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;background:${(difColor[ej.dificultad]||'var(--muted)')+'22'};color:${difColor[ej.dificultad]||'var(--muted)'};">${ej.dificultad||'media'}</span>
+        </div>
+        <div style="background:var(--surface);border-radius:10px;padding:14px;margin-bottom:12px;font-size:14px;line-height:1.6;">${ej.enunciado}</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">
+          <button onclick="extToggleEjPista('ejpistas-${i}')" style="background:rgba(245,197,66,.12);border:1px solid rgba(245,197,66,.3);color:var(--gold);padding:7px 14px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;">💡 Ver pistas</button>
+          <button onclick="extToggleEjSol('ejsol-${i}')" style="background:rgba(61,255,176,.1);border:1px solid rgba(61,255,176,.25);color:var(--green);padding:7px 14px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;">✅ Ver solución</button>
+        </div>
+        <div id="ejpistas-${i}" style="display:none;margin-top:12px;padding:12px;background:rgba(245,197,66,.07);border-radius:10px;border:1px solid rgba(245,197,66,.2);">
+          <div style="font-weight:700;color:var(--gold);font-size:12px;margin-bottom:8px;">💡 PISTAS</div>
+          <ul style="padding-left:16px;list-style:disc;">
+            ${(ej.pistas||[]).map(p=>`<li class="fs-13" style="margin-bottom:5px;line-height:1.5;">${p}</li>`).join('')}
+          </ul>
+        </div>
+        <div id="ejsol-${i}" style="display:none;margin-top:12px;padding:12px;background:rgba(61,255,176,.07);border-radius:10px;border:1px solid rgba(61,255,176,.2);">
+          <div style="font-weight:700;color:var(--green);font-size:12px;margin-bottom:8px;">✅ SOLUCIÓN</div>
+          <div class="fs-13" style="line-height:1.6;">${ej.solucion}</div>
+        </div>
+        <div style="margin-top:14px;">
+          <label class="field-label">Mi respuesta (practica escribiéndola):</label>
+          <textarea placeholder="Escribe tu respuesta aquí antes de ver la solución..." style="min-height:70px;"></textarea>
+        </div>
+      </div>`).join('')}
+    </div>`;
+}
+
+function extToggleEjPista(id){const el=document.getElementById(id);el.style.display=el.style.display==='none'?'block':'none';}
+function extToggleEjSol(id){const el=document.getElementById(id);el.style.display=el.style.display==='none'?'block':'none';}
+
+/* ── EXAMEN IA ── */
+function renderExtExamen(){
+  const area=document.getElementById('ext-exam-area');
+  if(!extAIExamen.length){area.innerHTML='<p class="color-muted fs-13">No se generó el examen. Intenta regenerar.</p>';return;}
+  extExIdx=0;extExAnswers={};extExSecs=0;
+  area.innerHTML=`
+    <div style="max-width:640px;">
+      <div class="card mb-14" style="border-color:rgba(255,94,126,.25);background:rgba(255,94,126,.05);">
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px;">📝 Examen de Práctica — Generado por IA</div>
+        <p class="fs-13 color-muted">${extAIExamen.length} preguntas basadas en tu temario · Con explicaciones al terminar</p>
+        <div class="flex gap-12 mt-12">
+          <div style="text-align:center;flex:1;"><div style="font-size:20px;font-weight:800;color:var(--red);">${extAIExamen.length}</div><div class="fs-11 color-muted">preguntas</div></div>
+          <div style="text-align:center;flex:1;"><div style="font-size:20px;font-weight:800;color:var(--accent);" id="extex-timer">00:00</div><div class="fs-11 color-muted">tiempo</div></div>
+          <div style="text-align:center;flex:1;"><div style="font-size:20px;font-weight:800;color:var(--gold);">100%</div><div class="fs-11 color-muted">temas cubiertos</div></div>
+        </div>
+      </div>
+      <div id="extex-config">
+        <button class="btn-primary btn-full" style="background:linear-gradient(135deg,var(--red),#9b2335);font-size:15px;font-weight:800;padding:14px;" onclick="extExStart()">🚨 Comenzar Examen →</button>
+      </div>
+      <div id="extex-quiz" style="display:none;">
+        <div class="flex justify-between mb-12">
+          <span style="font-family:'Space Mono';color:var(--muted);font-size:13px;">⏱ <span id="extex-time">00:00</span></span>
+          <span class="fs-13 color-muted" id="extex-counter">1/${extAIExamen.length}</span>
+        </div>
+        <div style="background:var(--surface);height:5px;border-radius:3px;margin-bottom:20px;"><div id="extex-bar" style="background:linear-gradient(90deg,var(--red),var(--accent));height:5px;border-radius:3px;width:${Math.round(1/extAIExamen.length*100)}%;transition:width .4s;"></div></div>
+        <span class="tag tag-red mb-14" id="extex-tema" style="display:inline-block;"></span>
+        <div style="font-size:18px;font-weight:700;margin-bottom:20px;line-height:1.4;" id="extex-question"></div>
+        <div id="extex-options" class="flex flex-col gap-10 mb-18"></div>
+        <button class="btn-primary btn-full" id="extex-next" style="opacity:.4;" disabled onclick="extExNext()">Siguiente →</button>
+      </div>
+      <div id="extex-result" style="display:none;"></div>
+    </div>`;
+}
+
+function extExStart(){
+  extExIdx=0;extExAnswers={};extExSecs=0;
+  document.getElementById('extex-config').style.display='none';
+  document.getElementById('extex-quiz').style.display='block';
+  extExTimer=setInterval(()=>{extExSecs++;document.getElementById('extex-time').textContent=fmtTime(extExSecs);},1000);
+  extExRenderQ();
+}
+
+function extExRenderQ(){
+  const q=extAIExamen[extExIdx];
+  document.getElementById('extex-counter').textContent=(extExIdx+1)+'/'+extAIExamen.length;
+  document.getElementById('extex-bar').style.width=Math.round((extExIdx+1)/extAIExamen.length*100)+'%';
+  document.getElementById('extex-tema').textContent=q.tema||'—';
+  document.getElementById('extex-question').textContent=q.pregunta;
+  const cont=document.getElementById('extex-options');cont.innerHTML='';
+  (q.opciones||[]).forEach((op,i)=>{
+    const d=document.createElement('div');
+    d.style.cssText='padding:13px 17px;border-radius:13px;border:2px solid var(--border);background:var(--card);cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s;font-size:14px;';
+    d.innerHTML=`<div style="width:26px;height:26px;border-radius:50%;background:rgba(38,42,69,.9);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${String.fromCharCode(65+i)}</div>${op}`;
+    d.onclick=()=>{
+      if(extExAnswers[extExIdx]!==undefined)return;
+      extExAnswers[extExIdx]=i;
+      document.querySelectorAll('#extex-options>div').forEach((dd,ii)=>{if(ii===i){dd.style.border='2px solid var(--accent)';dd.style.background='rgba(108,99,255,.15)';dd.style.fontWeight='700';}});
+      const nb=document.getElementById('extex-next');nb.disabled=false;nb.style.opacity='1';
+      nb.textContent=extExIdx<extAIExamen.length-1?'Siguiente →':'Ver resultados';
+    };
+    cont.appendChild(d);
+  });
+  const nb=document.getElementById('extex-next');nb.disabled=true;nb.style.opacity='.4';
+  nb.textContent=extExIdx<extAIExamen.length-1?'Siguiente →':'Ver resultados';
+}
+
+function extExNext(){
+  if(extExIdx<extAIExamen.length-1){extExIdx++;extExRenderQ();}
+  else{clearInterval(extExTimer);extExShowResult();}
+}
+
+function extExShowResult(){
+  document.getElementById('extex-quiz').style.display='none';
+  const correct=extAIExamen.filter((q,i)=>extExAnswers[i]===q.correcta).length;
+  const pct=Math.round(correct/extAIExamen.length*100);
+  const col=pct>=80?'var(--green)':pct>=60?'var(--gold)':'var(--red)';
+  const res=document.getElementById('extex-result');
+  res.style.display='block';
+  res.innerHTML=`
+    <div class="card text-center mb-14" style="border-color:${col}44;">
+      <div style="font-size:52px;">${pct>=80?'🏆':pct>=60?'👍':'📚'}</div>
+      <div style="font-size:22px;font-weight:800;margin-top:8px;">${pct>=80?'¡Excelente!':pct>=60?'¡Bien hecho!':'Sigue repasando'}</div>
+      <div style="font-size:48px;font-weight:800;color:${col};margin:10px 0;">${pct}%</div>
+      <p class="fs-13 color-muted">${correct} de ${extAIExamen.length} correctas · ${fmtTime(extExSecs)}</p>
+    </div>
+    <div class="flex flex-col gap-10 mb-14">
+    ${extAIExamen.map((q,i)=>{
+      const ok=extExAnswers[i]===q.correcta;
+      return`<div class="card" style="border-color:${ok?'rgba(61,255,176,.3)':'rgba(255,94,126,.3)'};">
+        <div class="flex justify-between items-start mb-6">
+          <span style="font-size:13px;font-weight:600;flex:1;margin-right:10px;">${q.pregunta}</span>
+          <span style="flex-shrink:0;">${ok?'✅':'❌'}</span>
+        </div>
+        ${!ok?`<div class="fs-12 color-muted mb-4">Tu respuesta: <span style="color:var(--red);">${q.opciones?q.opciones[extExAnswers[i]]:'—'}</span></div>
+        <div class="fs-12 color-muted mb-4">Correcta: <span style="color:var(--green);">${q.opciones?q.opciones[q.correcta]:'—'}</span></div>`:''}
+        ${q.explicacion?`<div style="margin-top:6px;padding:8px 12px;border-radius:8px;background:rgba(108,99,255,.1);font-size:12px;line-height:1.5;color:var(--muted);">💡 ${q.explicacion}</div>`:''}
+      </div>`;
+    }).join('')}
+    </div>
+    <button class="btn-primary btn-full" style="background:linear-gradient(135deg,var(--red),#9b2335);" onclick="extExRestart()">🔄 Repetir examen</button>`;
+}
+
+function extExRestart(){
+  extExIdx=0;extExAnswers={};extExSecs=0;
+  document.getElementById('extex-result').style.display='none';
+  document.getElementById('extex-config').style.display='block';
+}
+
+function fmtTime(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+
+/* ═══════════════════════════════
+   TAREAS
+═══════════════════════════════ */
+let tareas=[];
+let tareasFilter='todas';
+let tareaSelectedId=null;
+let chatHistory=[];
+let currentTareaPrio='alta';
+
+function setTareaPrio(p){
+  currentTareaPrio=p;
+  ['alta','media','baja'].forEach(x=>document.getElementById('tarea-prio-'+x).classList.toggle('active',x===p));
+}
+
+function openNewTareaModal(){
+  document.getElementById('tarea-modal').style.display='flex';
+  document.getElementById('tarea-titulo').value='';
+  document.getElementById('tarea-desc').value='';
+  document.getElementById('tarea-materia').value='';
+  document.getElementById('tarea-fecha').value='';
+  setTareaPrio('alta');
+}
+function closeTareaModal(){document.getElementById('tarea-modal').style.display='none';}
+
+async function saveTarea(){
+  const titulo=document.getElementById('tarea-titulo').value.trim();
+  const desc=document.getElementById('tarea-desc').value.trim();
+  const materia=document.getElementById('tarea-materia').value.trim();
+  const fecha=document.getElementById('tarea-fecha').value;
+  if(!titulo){alert('Escribe un título para la tarea.');return;}
+  const tarea={titulo,descripcion:desc,materia,fecha_entrega:fecha,prioridad:currentTareaPrio,estado:'pendiente',creada:new Date().toISOString().slice(0,10)};
+  const saved=await dbInsert('tareas',tarea);
+  if(saved&&saved[0]) tarea.id=saved[0].id;
+  else tarea.id=Date.now();
+  tareas.unshift(tarea);
+  closeTareaModal();
+  renderTareas();
+}
+
+async function loadTareas(){
+  const dbTareas=await dbSelect('tareas');
+  if(dbTareas&&dbTareas.length>0){
+    tareas=dbTareas.map(t=>({id:t.id,titulo:t.titulo,descripcion:t.descripcion||'',materia:t.materia||'',fecha_entrega:t.fecha_entrega||'',prioridad:t.prioridad||'media',estado:t.estado||'pendiente',creada:(t.created_at||'').slice(0,10)}));
+  }
+  renderTareas();
+}
+
+function tareasSetFilter(f){
+  tareasFilter=f;
+  ['todas','pendiente','completada'].forEach(x=>document.getElementById('tarea-filter-'+x).classList.toggle('active',x===f));
+  renderTareas();
+}
+
+function renderTareas(){
+  const list=document.getElementById('tareas-list');
+  const empty=document.getElementById('tareas-empty');
+  let filtered=tareas;
+  if(tareasFilter!=='todas') filtered=tareas.filter(t=>t.estado===tareasFilter);
+  list.innerHTML='';
+  if(!filtered.length){empty.style.display='block';return;}
+  empty.style.display='none';
+  const prioColor={alta:'var(--red)',media:'var(--gold)',baja:'var(--green)'};
+  const prioBg={alta:'rgba(255,94,126,.12)',media:'rgba(245,197,66,.12)',baja:'rgba(61,255,176,.12)'};
+  filtered.forEach(t=>{
+    const div=document.createElement('div');
+    div.className='tarea-card'+(t.estado==='completada'?' done':'');
+    if(tareaSelectedId===t.id) div.style.borderColor='rgba(108,99,255,.5)';
+    div.innerHTML=`
+      <div class="flex justify-between items-start mb-8">
+        <div class="flex items-center gap-10" style="flex:1;">
+          <input type="checkbox" ${t.estado==='completada'?'checked':''} onchange="toggleTarea('${t.id}')" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0;cursor:pointer;"/>
+          <div class="tarea-title" style="font-weight:700;font-size:14px;flex:1;">${t.titulo}</div>
+        </div>
+        <div class="flex gap-6 items-center">
+          <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;background:${prioBg[t.prioridad]||prioBg.media};color:${prioColor[t.prioridad]||prioColor.media};">${t.prioridad||'media'}</span>
+          <button onclick="deleteTarea('${t.id}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:16px;line-height:1;padding:0 4px;">×</button>
+        </div>
+      </div>
+      ${t.descripcion?`<p class="fs-13 color-muted mb-8" style="padding-left:28px;line-height:1.5;">${t.descripcion.substring(0,120)}${t.descripcion.length>120?'...':''}</p>`:''}
+      <div class="flex gap-10 items-center" style="padding-left:28px;flex-wrap:wrap;">
+        ${t.materia?`<span class="tag tag-accent fs-11">${t.materia}</span>`:''}
+        ${t.fecha_entrega?`<span class="fs-12 color-muted">📅 ${t.fecha_entrega}</span>`:''}
+        <button onclick="selectTareaForChat('${t.id}')" style="background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);color:var(--accent-light);padding:4px 12px;border-radius:9px;font-size:12px;font-weight:700;cursor:pointer;">🤖 Pedir ayuda a IA</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+
+async function toggleTarea(id){
+  const t=tareas.find(x=>x.id==id);
+  if(!t)return;
+  t.estado=t.estado==='completada'?'pendiente':'completada';
+  await dbUpdate('tareas',id,{estado:t.estado});
+  renderTareas();
+}
+
+async function deleteTarea(id){
+  if(!confirm('¿Eliminar esta tarea?'))return;
+  await dbDelete('tareas',id);
+  tareas=tareas.filter(t=>t.id!=id);
+  if(tareaSelectedId==id){tareaSelectedId=null;document.getElementById('tarea-seleccionada-banner').style.display='none';}
+  renderTareas();
+}
+
+function selectTareaForChat(id){
+  const t=tareas.find(x=>x.id==id);
+  if(!t)return;
+  tareaSelectedId=id;
+  document.getElementById('tarea-seleccionada-banner').style.display='block';
+  document.getElementById('tarea-seleccionada-titulo').textContent=t.titulo;
+  chatHistory=[];
+  document.getElementById('chat-messages').innerHTML='';
+  addChatBubble('ai',`¡Hola! Estoy listo para ayudarte con la tarea: **${t.titulo}**.\n\n${t.descripcion?'Descripción: '+t.descripcion+'\n\n':''}¿Cómo quieres que te ayude? Puedo explicarte el tema, guiarte paso a paso, o ayudarte a desarrollar la tarea.`);
+  document.getElementById('chat-input').focus();
+  renderTareas();
+}
+
+function addChatBubble(role, text){
+  const cont=document.getElementById('chat-messages');
+  const div=document.createElement('div');
+  div.className='chat-bubble '+(role==='user'?'chat-user':'chat-ai');
+  div.innerHTML=text.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>').replace(/\n/g,'<br>');
+  cont.appendChild(div);
+  cont.scrollTop=cont.scrollHeight;
+}
+
+async function sendTareaChat(){
+  const input=document.getElementById('chat-input');
+  const msg=input.value.trim();
+  if(!msg)return;
+  input.value='';
+  addChatBubble('user',msg);
+  chatHistory.push({role:'user',content:msg});
+  document.getElementById('chat-loader').style.display='flex';
+  try{
+    const tarea=tareas.find(t=>t.id==tareaSelectedId);
+    const tareaCtx=tarea?`Tarea actual: "${tarea.titulo}". Descripción: "${tarea.descripcion||'sin descripción'}". Materia: ${tarea.materia||'no especificada'}.`:'';
+    const notesCtx=notes.length?'Apuntes del estudiante: '+notes.slice(0,3).map(n=>n.titulo+': '+n.contenido.substring(0,200)).join('\n'):'';
+    const systemPrompt=`Eres un tutor académico amigable y experto que ayuda a estudiantes a completar sus tareas. ${tareaCtx} ${notesCtx}
+Reglas:
+- Guía al estudiante paso a paso, no le des todo de una vez.
+- Usa lenguaje claro, amigable y motivador.
+- Si la tarea requiere un desarrollo, ayúdale a estructurar sus ideas.
+- Responde siempre en español.
+- Sé conciso pero completo.`;
+    const messages=[{role:'user',content:systemPrompt+'\n\nPrimera pregunta del estudiante: '+chatHistory[0].content},...chatHistory.slice(1)];
+    const res=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages})
+    });
+    if(!res.ok)throw new Error('API error');
+    const data=await res.json();
+    const reply=(data.content||[]).map(b=>b.text||'').join('');
+    chatHistory.push({role:'assistant',content:reply});
+    document.getElementById('chat-loader').style.display='none';
+    addChatBubble('ai',reply);
+  }catch(e){
+    document.getElementById('chat-loader').style.display='none';
+    addChatBubble('ai','❌ Error al conectar con la IA. Por favor intenta de nuevo.');
+  }
+}
+
+
+/* ── RESUMEN IA ── */
+function renderExtResumen(){
+  const area=document.getElementById('ext-resumen-area');
+  if(!extAIResumen){
+    area.innerHTML='<div class="card"><p class="fs-13 color-muted">El resumen no se pudo generar. Intenta regenerar el plan.</p></div>';return;
+  }
+  const r=extAIResumen;
+  area.innerHTML=`
+    <div>
+      <div class="card mb-14" style="border-color:rgba(108,99,255,.25);">
+        <div style="font-weight:700;font-size:15px;margin-bottom:10px;">📖 Resumen de Estudio — Generado por IA</div>
+        <p class="fs-14" style="line-height:1.7;color:var(--text);">${r.intro||''}</p>
+      </div>
+      <div class="flex flex-col gap-12">
+        ${(r.temas||[]).map((t,i)=>`
+        <div class="card" style="border-left:3px solid var(--accent);">
+          <div class="flex items-center gap-10 mb-12">
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(108,99,255,.2);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;color:var(--accent);">${i+1}</div>
+            <div style="font-weight:700;font-size:15px;">${t.nombre||'Tema '+(i+1)}</div>
+          </div>
+          <div class="mb-12">
+            <div class="fs-11 color-muted fw-700 mb-8" style="letter-spacing:.4px;">PUNTOS CLAVE</div>
+            <ul style="padding-left:18px;list-style:disc;">
+              ${(t.puntos_clave||[]).map(p=>`<li class="fs-13" style="margin-bottom:6px;line-height:1.5;">${p}</li>`).join('')}
+            </ul>
+          </div>
+          ${t.concepto_importante?`
+          <div style="padding:10px 14px;border-radius:10px;background:rgba(245,197,66,.1);border:1px solid rgba(245,197,66,.25);">
+            <span style="font-size:11px;font-weight:700;color:var(--gold);">⭐ CONCEPTO CLAVE A RECORDAR</span>
+            <p class="fs-13 mt-6" style="line-height:1.5;">${t.concepto_importante}</p>
+          </div>`:''}
+        </div>`).join('')}
+      </div>
+      ${r.consejo_final?`
+      <div class="card mt-14" style="background:linear-gradient(135deg,rgba(255,94,126,.1),rgba(108,99,255,.07));border-color:rgba(255,94,126,.3);">
+        <div style="font-weight:700;color:var(--red);margin-bottom:8px;">🚨 Consejo Final</div>
+        <p class="fs-14" style="line-height:1.6;">${r.consejo_final}</p>
+      </div>`:''}
+    </div>`;
+}
+
+/* ═══════════════════════════════
+   AUTH — Supabase Authentication
+═══════════════════════════════ */
+let _authUser = null;
+
+function authSwitchTab(tab){
+  document.getElementById('auth-tab-login').classList.toggle('active', tab==='login');
+  document.getElementById('auth-tab-register').classList.toggle('active', tab==='register');
+  document.getElementById('auth-login-form').style.display   = tab==='login'    ? 'block' : 'none';
+  document.getElementById('auth-register-form').style.display = tab==='register' ? 'block' : 'none';
+  document.getElementById('login-msg').className = 'auth-msg';
+  document.getElementById('register-msg').className = 'auth-msg';
+}
+
+function authShowMsg(id, text, type){
+  const el = document.getElementById(id);
+  el.textContent = text;
+  el.className = 'auth-msg ' + type;
+}
+
+async function authLogin(){
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  if(!email || !pass){ authShowMsg('login-msg','Por favor completa todos los campos.','error'); return; }
+  const btn = document.getElementById('login-btn');
+  btn.disabled = true; btn.textContent = 'Entrando...';
+  try{
+    const db = _getClient();
+    if(!db){ authShowMsg('login-msg','Error al conectar con Supabase.','error'); btn.disabled=false; btn.textContent='Entrar →'; return; }
+    const { data, error } = await db.auth.signInWithPassword({ email, password: pass });
+    if(error) throw error;
+    authOnLogin(data.user);
+  } catch(e){
+    authShowMsg('login-msg',
+      e.message === 'Invalid login credentials' ? 'Correo o contraseña incorrectos.' : e.message,
+      'error');
+    btn.disabled = false; btn.textContent = 'Entrar →';
+  }
+}
+
+async function authRegister(){
+  const name  = document.getElementById('reg-name').value.trim();
+  const email = document.getElementById('reg-email').value.trim();
+  const pass  = document.getElementById('reg-password').value;
+  const pass2 = document.getElementById('reg-password2').value;
+  if(!name || !email || !pass){ authShowMsg('register-msg','Por favor completa todos los campos.','error'); return; }
+  if(pass.length < 6){ authShowMsg('register-msg','La contraseña debe tener al menos 6 caracteres.','error'); return; }
+  if(pass !== pass2){ authShowMsg('register-msg','Las contraseñas no coinciden.','error'); return; }
+  const btn = document.getElementById('register-btn');
+  btn.disabled = true; btn.textContent = 'Creando cuenta...';
+  try{
+    const db = _getClient();
+    if(!db){ authShowMsg('register-msg','Error al conectar con Supabase.','error'); btn.disabled=false; btn.textContent='Crear cuenta'; return; }
+    const { data, error } = await db.auth.signUp({
+      email, password: pass,
+      options: { data: { full_name: name } }
+    });
+    if(error) throw error;
+    // If email confirmation required
+    if(data.user && data.user.identities && data.user.identities.length > 0 && !data.session){
+      authShowMsg('register-msg','¡Cuenta creada! Revisa tu correo para confirmar, luego inicia sesión.','success');
+      btn.disabled = false; btn.textContent = 'Crear cuenta';
+    } else if(data.user) {
+      authOnLogin(data.user);
+    }
+  } catch(e){
+    authShowMsg('register-msg',
+      e.message === 'User already registered' ? 'Este correo ya está registrado. Intenta iniciar sesión.' : e.message,
+      'error');
+    btn.disabled = false; btn.textContent = 'Crear cuenta';
+  }
+}
+
+async function authLogout(){
+  if(!confirm('¿Cerrar sesión?')) return;
+  const db = _getClient();
+  if(db) await db.auth.signOut();
+  _authUser = null;
+  document.getElementById('auth-overlay').classList.remove('hidden');
+  document.getElementById('user-chip').style.display = 'none';
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-password').value = '';
+  document.getElementById('login-msg').className = 'auth-msg';
+  document.getElementById('login-btn').disabled = false;
+  document.getElementById('login-btn').textContent = 'Entrar →';
+}
+
+function authOnLogin(user){
+  _authUser = user;
+  const name = (user.user_metadata && user.user_metadata.full_name) || user.email.split('@')[0];
+  const initials = name.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
+  document.getElementById('user-avatar').textContent  = initials;
+  document.getElementById('user-name').textContent    = name;
+  document.getElementById('user-email').textContent   = user.email;
+  document.getElementById('user-chip').style.display  = 'flex';
+  document.getElementById('auth-overlay').classList.add('hidden');
+  // Greet in dashboard
+  const titleEl = document.getElementById('dashboard-greeting');
+  if(titleEl) titleEl.textContent = 'Buenos días, ' + name.split(' ')[0] + ' 👋';
+  // Refresh data for this user
+  fcInit();
+  notesInit();
+}
+
+// Check for existing session when page loads
+(async function authInit(){
+  const db = _getClient();
+  if(!db) return;
+  try {
+    const { data: { session } } = await db.auth.getSession();
+    if(session && session.user){
+      authOnLogin(session.user);
+    }
+    db.auth.onAuthStateChange((_event, session) => {
+      if(session && session.user){ authOnLogin(session.user); }
+      else {
+        _authUser = null;
+        document.getElementById('auth-overlay').classList.remove('hidden');
+        document.getElementById('user-chip').style.display = 'none';
+      }
+    });
+  } catch(e){ console.warn('Auth init error:', e.message); }
+})();
+
+</script>
+
+<!-- ══════════════ AUTH OVERLAY ══════════════ -->
+<div id="auth-overlay">
+  <div class="auth-box">
+    <div class="auth-logo">
+      <h1>Study<span>AI</span></h1>
+      <p>Tu compañero de estudio inteligente</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" id="auth-tab-login" onclick="authSwitchTab('login')">Iniciar sesión</button>
+      <button class="auth-tab" id="auth-tab-register" onclick="authSwitchTab('register')">Registrarse</button>
+    </div>
+    <!-- Login -->
+    <div id="auth-login-form">
+      <div class="auth-field">
+        <label>Correo electrónico</label>
+        <input type="email" id="login-email" placeholder="tucorreo@ejemplo.com" onkeydown="if(event.key==='Enter')authLogin()"/>
+      </div>
+      <div class="auth-field">
+        <label>Contraseña</label>
+        <input type="password" id="login-password" placeholder="••••••••" onkeydown="if(event.key==='Enter')authLogin()"/>
+      </div>
+      <button class="auth-btn" id="login-btn" onclick="authLogin()">Entrar →</button>
+      <div id="login-msg" class="auth-msg"></div>
+      <div class="auth-divider">o</div>
+      <p style="text-align:center;font-size:12px;color:var(--muted);">
+        ¿No tienes cuenta?
+        <a href="#" onclick="authSwitchTab('register');return false;" style="color:var(--accent-light);font-weight:700;">Regístrate gratis</a>
+      </p>
+    </div>
+    <!-- Register -->
+    <div id="auth-register-form" style="display:none;">
+      <div class="auth-field">
+        <label>Nombre</label>
+        <input type="text" id="reg-name" placeholder="Tu nombre" onkeydown="if(event.key==='Enter')authRegister()"/>
+      </div>
+      <div class="auth-field">
+        <label>Correo electrónico</label>
+        <input type="email" id="reg-email" placeholder="tucorreo@ejemplo.com" onkeydown="if(event.key==='Enter')authRegister()"/>
+      </div>
+      <div class="auth-field">
+        <label>Contraseña</label>
+        <input type="password" id="reg-password" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')authRegister()"/>
+      </div>
+      <div class="auth-field">
+        <label>Confirmar contraseña</label>
+        <input type="password" id="reg-password2" placeholder="Repite tu contraseña" onkeydown="if(event.key==='Enter')authRegister()"/>
+      </div>
+      <button class="auth-btn" id="register-btn" onclick="authRegister()">Crear cuenta</button>
+      <div id="register-msg" class="auth-msg"></div>
+      <div class="auth-divider">o</div>
+      <p style="text-align:center;font-size:12px;color:var(--muted);">
+        ¿Ya tienes cuenta?
+        <a href="#" onclick="authSwitchTab('login');return false;" style="color:var(--accent-light);font-weight:700;">Inicia sesión</a>
+      </p>
+    </div>
+  </div>
+</div>
+</body>
+</html>
