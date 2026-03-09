@@ -374,6 +374,81 @@ label.field-label{display:block;font-size:11px;font-weight:700;color:var(--muted
 .apikey-box a{color:var(--accent-light);}
 .apikey-note{font-size:11px;color:var(--muted);margin-top:10px;text-align:center;}
 
+
+/* Image upload in notes */
+#note-img-drop{
+  border:2px dashed var(--border);border-radius:14px;
+  padding:22px;text-align:center;cursor:pointer;
+  transition:all .25s;background:var(--surface);margin-bottom:4px;
+}
+#note-img-drop:hover,#note-img-drop.dragover{
+  border-color:var(--accent);background:rgba(108,99,255,.07);
+}
+#note-img-drop input[type=file]{display:none;}
+#note-img-preview{
+  width:100%;max-height:220px;object-fit:contain;
+  border-radius:10px;margin-top:10px;display:none;border:1px solid var(--border);
+}
+#note-transcribe-btn{
+  width:100%;padding:10px;border-radius:11px;
+  background:linear-gradient(135deg,var(--accent),#9b7fff);
+  color:#fff;font-weight:800;font-size:14px;border:none;
+  cursor:pointer;margin-top:10px;display:none;
+  font-family:'Sora',sans-serif;transition:all .2s;
+}
+#note-transcribe-btn:hover{opacity:.88;transform:translateY(-1px);}
+#note-transcribe-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.note-img-tabs{display:flex;gap:6px;margin-bottom:14px;}
+.note-img-tab{flex:1;padding:8px;border-radius:9px;font-weight:700;font-size:12px;
+  background:var(--surface);color:var(--muted);cursor:pointer;border:1px solid var(--border);
+  font-family:'Sora',sans-serif;transition:all .2s;}
+.note-img-tab.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+
+/* ── Folders ── */
+.folder-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:11px;cursor:pointer;
+  border:1.5px solid var(--border);background:var(--card);
+  transition:all .2s;margin-bottom:6px;
+}
+.folder-item:hover,.folder-item.active{
+  border-color:var(--accent);background:rgba(108,99,255,.08);
+}
+.folder-item .fi-icon{font-size:18px;}
+.folder-item .fi-name{font-weight:700;font-size:13px;flex:1;}
+.folder-item .fi-count{font-size:11px;color:var(--muted);background:var(--surface);
+  padding:2px 7px;border-radius:20px;}
+.folder-item .fi-del{
+  opacity:0;font-size:14px;color:var(--muted);background:none;border:none;
+  cursor:pointer;padding:2px 5px;transition:opacity .2s;
+}
+.folder-item:hover .fi-del{opacity:1;}
+.folder-breadcrumb{
+  display:flex;align-items:center;gap:6px;font-size:12px;
+  color:var(--muted);margin-bottom:12px;flex-wrap:wrap;
+}
+.folder-breadcrumb span{cursor:pointer;transition:color .15s;}
+.folder-breadcrumb span:hover{color:var(--accent-light);}
+.folder-breadcrumb .sep{opacity:.4;}
+#notes-toolbar{display:flex;gap-8px;margin-bottom:14px;gap:8px;}
+.notes-view-btn{
+  padding:6px 13px;border-radius:9px;font-size:12px;font-weight:700;
+  background:var(--surface);color:var(--muted);border:1px solid var(--border);
+  cursor:pointer;font-family:'Sora',sans-serif;transition:all .2s;
+}
+.notes-view-btn.active{background:var(--accent);color:#fff;border-color:var(--accent);}
+#folder-modal{
+  position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);
+  backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center;
+}
+#folder-modal.open{display:flex;}
+.folder-modal-box{
+  background:var(--surface);border:1px solid var(--border);border-radius:18px;
+  padding:28px 24px;width:100%;max-width:360px;animation:popIn .25s ease both;
+}
+.folder-modal-box h3{font-size:16px;font-weight:800;margin-bottom:16px;}
+
 </style>
 </head>
 <body>
@@ -798,11 +873,28 @@ label.field-label{display:block;font-size:11px;font-weight:700;color:var(--muted
   <div id="notes-layout">
     <!-- List -->
     <div>
-      <div class="flex justify-between items-center mb-14">
+      <div class="flex justify-between items-center mb-10">
         <h1 style="font-size:20px;font-weight:800;">📓 Apuntes</h1>
-        <button class="btn-primary" style="padding:6px 14px;font-size:13px;" onclick="addNote()">+ Nueva</button>
+        <div class="flex gap-6">
+          <button class="notes-view-btn active" id="btn-view-folders" onclick="notesSetView('folders')" title="Carpetas">📁</button>
+          <button class="notes-view-btn" id="btn-view-all" onclick="notesSetView('all')" title="Todas las notas">📄</button>
+          <button class="btn-primary" style="padding:6px 14px;font-size:13px;" onclick="addNote()">+ Nueva</button>
+        </div>
       </div>
-      <div id="notes-list" class="flex flex-col gap-10"></div>
+      <!-- Breadcrumb -->
+      <div class="folder-breadcrumb" id="notes-breadcrumb"></div>
+      <!-- Folders view -->
+      <div id="folders-panel">
+        <div id="folders-list"></div>
+        <button onclick="openFolderModal()" style="width:100%;padding:9px;border-radius:10px;border:1.5px dashed var(--border);background:none;color:var(--muted);font-size:13px;font-weight:700;cursor:pointer;font-family:'Sora',sans-serif;transition:all .2s;" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+          + Nueva carpeta
+        </button>
+        <div id="folder-notes-list" class="flex flex-col gap-10 mt-14"></div>
+      </div>
+      <!-- All notes view -->
+      <div id="all-notes-panel" style="display:none;">
+        <div id="notes-list" class="flex flex-col gap-10"></div>
+      </div>
     </div>
     <!-- Editor -->
     <div id="note-editor">
@@ -815,7 +907,32 @@ label.field-label{display:block;font-size:11px;font-weight:700;color:var(--muted
           <input id="note-title-input" placeholder="Título..."/>
           <div class="flex gap-6" id="note-colors"></div>
         </div>
-        <textarea id="note-body" placeholder="Escribe tus apuntes aquí..."></textarea>
+        <!-- Tabs: Escribir / Imagen -->
+        <div class="note-img-tabs">
+          <button class="note-img-tab active" id="note-tab-write" onclick="noteTabSwitch('write')">✏️ Escribir</button>
+          <button class="note-img-tab" id="note-tab-image" onclick="noteTabSwitch('image')">📷 Subir imagen</button>
+        </div>
+        <!-- Write tab -->
+        <div id="note-write-panel">
+          <textarea id="note-body" placeholder="Escribe tus apuntes aquí..."></textarea>
+        </div>
+        <!-- Image tab -->
+        <div id="note-image-panel" style="display:none;">
+          <div id="note-img-drop" onclick="document.getElementById('note-img-input').click()"
+               ondragover="event.preventDefault();this.classList.add('dragover')"
+               ondragleave="this.classList.remove('dragover')"
+               ondrop="noteHandleDrop(event)">
+            <input type="file" id="note-img-input" accept="image/*" onchange="noteHandleImage(event)"/>
+            <div style="font-size:32px;margin-bottom:8px;">📷</div>
+            <div style="font-weight:700;font-size:14px;margin-bottom:4px;">Arrastra tu imagen aquí</div>
+            <div style="font-size:12px;color:var(--muted);">o haz click para seleccionar · JPG, PNG, WEBP</div>
+          </div>
+          <img id="note-img-preview" src="" alt="preview"/>
+          <button id="note-transcribe-btn" onclick="noteTranscribeImage()">
+            ✨ Transcribir con IA y guardar en apunte
+          </button>
+          <div id="note-img-status" style="font-size:12px;color:var(--muted);text-align:center;margin-top:8px;"></div>
+        </div>
         <div class="flex gap-10">
           <button class="btn-primary" style="padding:9px 22px;" onclick="saveNote()">Guardar</button>
           <button class="btn-danger" onclick="deleteNote()">Eliminar</button>
@@ -1745,10 +1862,15 @@ calcRender();
 ═══════════════════════════════ */
 const NOTE_COLORS=['#6C63FF','#F5C542','#3DFFB0','#FF5E7E','#00CFFF'];
 let notes=[
-  {id:1,titulo:'Resumen de Biología',contenido:'La fotosíntesis ocurre en los cloroplastos...',color:'#6C63FF',fecha:'2026-03-07'},
-  {id:2,titulo:'Fórmulas de Física',contenido:'F=ma, E=mc², P=F/A, v=d/t',color:'#F5C542',fecha:'2026-03-06'}
+  {id:1,titulo:'Resumen de Biología',contenido:'La fotosíntesis ocurre en los cloroplastos...',color:'#6C63FF',fecha:'2026-03-07',folder_id:null},
+  {id:2,titulo:'Fórmulas de Física',contenido:'F=ma, E=mc², P=F/A, v=d/t',color:'#F5C542',fecha:'2026-03-06',folder_id:null}
 ];
 let notesNextId=3,noteSelected=null;
+let folders=[]; // {id, nombre, color, user_id}
+let currentFolderId=null; // null = root
+let notesView='folders'; // 'folders' | 'all'
+const FOLDER_COLORS=['#6C63FF','#F5C542','#3DFFB0','#FF5E7E','#60CDFF','#FF9A3C','#B57BFF','#FF6B6B'];
+let folderModalColor=FOLDER_COLORS[0];
 
 function renderNoteColors(current){
   const cont=document.getElementById('note-colors');
@@ -1764,18 +1886,131 @@ function renderNoteColors(current){
 }
 
 function renderNotesList(){
-  const cont=document.getElementById('notes-list');
+  // All notes panel
+  const contAll=document.getElementById('notes-list');
+  if(contAll){
+    contAll.innerHTML='';
+    notes.forEach(n=>{
+      contAll.appendChild(_makeNoteCard(n));
+    });
+  }
+  // Folder panel: show notes inside current folder
+  const contFolder=document.getElementById('folder-notes-list');
+  if(contFolder){
+    contFolder.innerHTML='';
+    const folderNotes=notes.filter(n=>n.folder_id==currentFolderId);
+    if(folderNotes.length===0){
+      contFolder.innerHTML='<p style="font-size:13px;color:var(--muted);text-align:center;padding:16px 0;">No hay notas en esta carpeta.<br>Presiona <strong>+ Nueva</strong> para agregar.</p>';
+    } else {
+      folderNotes.forEach(n=>contFolder.appendChild(_makeNoteCard(n)));
+    }
+  }
+  // Render folders list
+  renderFoldersList();
+  // Breadcrumb
+  renderBreadcrumb();
+}
+
+function _makeNoteCard(n){
+  const div=document.createElement('div');
+  div.className='note-card';
+  div.style.borderColor=noteSelected&&noteSelected.id===n.id?n.color:'var(--border)';
+  div.innerHTML=`<div class="flex items-center gap-8 mb-6"><div class="color-dot" style="background:${n.color};"></div><span style="font-weight:700;font-size:14px;">${n.titulo}</span></div>
+  <p style="color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.contenido||'Sin contenido'}</p>
+  <div style="font-size:11px;color:var(--muted);margin-top:5px;">${n.fecha}</div>`;
+  div.onclick=()=>selectNote(n.id);
+  return div;
+}
+
+function renderFoldersList(){
+  const cont=document.getElementById('folders-list');
+  if(!cont) return;
   cont.innerHTML='';
-  notes.forEach(n=>{
+  folders.forEach(f=>{
+    const count=notes.filter(n=>n.folder_id===f.id).length;
     const div=document.createElement('div');
-    div.className='note-card';
-    div.style.borderColor=noteSelected&&noteSelected.id===n.id?n.color:'var(--border)';
-    div.innerHTML=`<div class="flex items-center gap-8 mb-6"><div class="color-dot" style="background:${n.color};"></div><span style="font-weight:700;font-size:14px;">${n.titulo}</span></div>
-    <p style="color:var(--muted);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${n.contenido||'Sin contenido'}</p>
-    <div style="font-size:11px;color:var(--muted);margin-top:5px;">${n.fecha}</div>`;
-    div.onclick=()=>selectNote(n.id);
+    div.className='folder-item'+(currentFolderId===f.id?' active':'');
+    div.innerHTML=`<span class="fi-icon">📁</span>
+      <span class="fi-name" style="color:${f.color||'var(--accent)'}">${f.nombre}</span>
+      <span class="fi-count">${count}</span>
+      <button class="fi-del" onclick="event.stopPropagation();deleteFolder('${f.id}')" title="Eliminar carpeta">✕</button>`;
+    div.onclick=()=>openFolder(f.id);
     cont.appendChild(div);
   });
+}
+
+function renderBreadcrumb(){
+  const bc=document.getElementById('notes-breadcrumb');
+  if(!bc) return;
+  if(notesView==='all'){ bc.innerHTML=''; return; }
+  if(currentFolderId===null){
+    bc.innerHTML='<span onclick="openFolder(null)" style="color:var(--accent-light);font-weight:700;">📁 Mis carpetas</span>';
+  } else {
+    const f=folders.find(x=>x.id===currentFolderId);
+    bc.innerHTML=`<span onclick="openFolder(null)">📁 Mis carpetas</span>
+    <span class="sep">/</span>
+    <span style="color:var(--accent-light);font-weight:700;">${f?f.nombre:'Carpeta'}</span>`;
+  }
+}
+
+function notesSetView(v){
+  notesView=v;
+  document.getElementById('folders-panel').style.display=v==='folders'?'block':'none';
+  document.getElementById('all-notes-panel').style.display=v==='all'?'block':'none';
+  document.getElementById('btn-view-folders').classList.toggle('active',v==='folders');
+  document.getElementById('btn-view-all').classList.toggle('active',v==='all');
+  renderNotesList();
+}
+
+function openFolder(id){
+  currentFolderId=id;
+  renderNotesList();
+}
+
+// ── Folder modal ──
+function openFolderModal(){
+  folderModalColor=FOLDER_COLORS[0];
+  document.getElementById('folder-name-input').value='';
+  const picker=document.getElementById('folder-color-picker');
+  picker.innerHTML='';
+  FOLDER_COLORS.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='color-swatch';
+    d.style.background=c;
+    d.style.border=c===folderModalColor?'2px solid white':'2px solid transparent';
+    d.onclick=()=>{folderModalColor=c;openFolderModal();document.getElementById('folder-name-input').focus();};
+    picker.appendChild(d);
+  });
+  document.getElementById('folder-modal').classList.add('open');
+  setTimeout(()=>document.getElementById('folder-name-input').focus(),100);
+}
+function closeFolderModal(){ document.getElementById('folder-modal').classList.remove('open'); }
+
+async function saveFolderModal(){
+  const nombre=document.getElementById('folder-name-input').value.trim();
+  if(!nombre){ alert('Escribe un nombre para la carpeta'); return; }
+  const newFolder={id:'f_'+Date.now(),nombre,color:folderModalColor};
+  folders.push(newFolder);
+  // Save to Supabase
+  await dbInsert('carpetas',{nombre,color:folderModalColor,client_id:newFolder.id});
+  closeFolderModal();
+  renderNotesList();
+}
+
+async function deleteFolder(id){
+  if(!confirm('¿Eliminar carpeta? Las notas dentro quedarán sin carpeta.')) return;
+  // Move notes to root
+  notes=notes.map(n=>n.folder_id===id?{...n,folder_id:null}:n);
+  // Update in DB
+  const toUpdate=await dbSelect('apuntes',{folder_id:id});
+  for(const n of toUpdate){ await dbUpdate('apuntes',n.id,{folder_id:null}); }
+  // Delete folder from DB
+  const dbF=await dbSelect('carpetas');
+  const match=dbF.find(f=>f.client_id===id||f.id===id);
+  if(match) await dbDelete('carpetas',match.id);
+  folders=folders.filter(f=>f.id!==id);
+  if(currentFolderId===id) currentFolderId=null;
+  renderNotesList();
 }
 
 function selectNote(id){
@@ -1790,7 +2025,7 @@ function selectNote(id){
 }
 
 function addNote(){
-  const n={id:notesNextId++,titulo:'Nueva nota',contenido:'',color:NOTE_COLORS[0],fecha:new Date().toISOString().slice(0,10)};
+  const n={id:notesNextId++,titulo:'Nueva nota',contenido:'',color:NOTE_COLORS[0],fecha:new Date().toISOString().slice(0,10),folder_id:currentFolderId};
   notes.push(n);renderNotesList();selectNote(n.id);
 }
 
@@ -1818,11 +2053,18 @@ renderNotesList();
 
 /* ── Notes Supabase sync ── */
 async function notesInit(){
+  // Load folders first
+  const dbFolders=await dbSelect('carpetas');
+  if(dbFolders&&dbFolders.length>0){
+    folders=dbFolders.map(f=>({id:f.client_id||f.id,nombre:f.nombre||'Carpeta',color:f.color||FOLDER_COLORS[0]}));
+  }
+  // Load notes
   const dbNotes=await dbSelect('apuntes');
   if(dbNotes&&dbNotes.length>0){
-    notes=dbNotes.map(n=>({id:n.id,titulo:n.titulo||'Sin título',contenido:n.contenido||'',color:n.color||NOTE_COLORS[0],fecha:(n.created_at||'').slice(0,10)}));
-    renderNotesList();
+    notes=dbNotes.map(n=>({id:n.id,titulo:n.titulo||'Sin título',contenido:n.contenido||'',color:n.color||NOTE_COLORS[0],fecha:(n.created_at||'').slice(0,10),folder_id:n.folder_id||null}));
   }
+  currentFolderId=null;
+  renderNotesList();
 }
 const _origSaveNote=saveNote;
 saveNote=async function(){
@@ -1834,7 +2076,7 @@ saveNote=async function(){
   if(noteSelected.id&&String(noteSelected.id).length>10){
     await dbUpdate('apuntes',noteSelected.id,{titulo:noteSelected.titulo,contenido:noteSelected.contenido,color:noteSelected.color});
   } else {
-    const saved=await dbInsert('apuntes',{titulo:noteSelected.titulo,contenido:noteSelected.contenido,color:noteSelected.color,fecha:noteSelected.fecha});
+    const saved=await dbInsert('apuntes',{titulo:noteSelected.titulo,contenido:noteSelected.contenido,color:noteSelected.color,fecha:noteSelected.fecha,folder_id:noteSelected.folder_id||null});
     if(saved&&saved[0]&&idx>=0) notes[idx].id=saved[0].id;
   }
   document.getElementById('note-edit-area').style.display='none';
@@ -2092,13 +2334,13 @@ Responde SOLO con JSON válido sin markdown:
 }
 
 // ── Anthropic API call ──
-let _apiKey = '';
+let _apiKey = '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';
 
 function getApiKey(){ return _apiKey; }
 
 function saveApiKey(){
   const k = document.getElementById('apikey-input').value.trim();
-  if(!k){ alert('Por favor ingresa tu API Key de Gemini'); return; }
+  if(!k){ alert('Por favor ingresa tu API Key de Groq'); return; }
   _apiKey = k;
   closeApiKeyModal();
 }
@@ -2107,22 +2349,26 @@ function closeApiKeyModal(){ document.getElementById('apikey-modal').classList.r
 
 async function callAI(prompt){
   if(!_apiKey){ openApiKeyModal(); throw new Error('API Key no configurada'); }
-  const url = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + _apiKey;
-  const res = await fetch(url, {
+  const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + _apiKey
+    },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { maxOutputTokens: 1500, temperature: 0.7 }
+      model: 'llama-3.3-70b-versatile',
+      max_tokens: 1500,
+      temperature: 0.7,
+      messages: [{ role: 'user', content: prompt }]
     })
   });
   if(!res.ok){
     const err = await res.json().catch(()=>({}));
-    if(res.status === 400 || res.status === 403){ _apiKey=''; openApiKeyModal(); throw new Error('API Key inválida'); }
+    if(res.status === 401){ _apiKey=''; openApiKeyModal(); throw new Error('API Key inválida'); }
     throw new Error('Error ' + res.status + ': ' + (err.error?.message || 'desconocido'));
   }
   const data = await res.json();
-  let text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  let text = data.choices?.[0]?.message?.content || '';
   text = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
   return text;
 }
@@ -2652,19 +2898,19 @@ Reglas:
     const messages=[{role:'user',content:systemPrompt+'\n\nPrimera pregunta del estudiante: '+chatHistory[0].content},...chatHistory.slice(1)];
     if(!_apiKey){ openApiKeyModal(); document.getElementById('chat-loader').style.display='none'; addChatBubble('ai','🔑 Configura tu API Key de Gemini para usar el chat.'); return; }
     // Build Gemini conversation format
-    const geminiContents = messages.map(m => ({
-      role: m.role === 'assistant' ? 'model' : 'user',
-      parts: [{ text: m.content }]
-    }));
-    const chatUrl = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=' + _apiKey;
+    const chatUrl = 'https://api.groq.com/openai/v1/chat/completions';
     const res=await fetch(chatUrl,{
       method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({ contents: geminiContents, generationConfig:{ maxOutputTokens:1000 } })
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+_apiKey},
+      body:JSON.stringify({
+        model:'llama-3.3-70b-versatile',
+        max_tokens:1000,
+        messages: messages
+      })
     });
-    if(!res.ok){ if(res.status===400||res.status===403){_apiKey='';openApiKeyModal();} throw new Error('API error '+res.status); }
+    if(!res.ok){ if(res.status===401){_apiKey='';openApiKeyModal();} throw new Error('API error '+res.status); }
     const data=await res.json();
-    const reply=data.candidates?.[0]?.content?.parts?.[0]?.text||'';
+    const reply=data.choices?.[0]?.message?.content||'';
     chatHistory.push({role:'assistant',content:reply});
     document.getElementById('chat-loader').style.display='none';
     addChatBubble('ai',reply);
@@ -2970,6 +3216,155 @@ pomoUpdate = function(){
   if(el) el.textContent = pomoCycles * 25;
 };
 
+
+/* ═══════════════════════════════
+   NOTES — Image Upload & Transcription
+═══════════════════════════════ */
+let _noteImgBase64 = '';
+let _noteImgMime = '';
+
+function noteTabSwitch(tab){
+  document.getElementById('note-tab-write').classList.toggle('active', tab==='write');
+  document.getElementById('note-tab-image').classList.toggle('active', tab==='image');
+  document.getElementById('note-write-panel').style.display = tab==='write' ? 'block' : 'none';
+  document.getElementById('note-image-panel').style.display = tab==='image' ? 'block' : 'none';
+}
+
+function noteHandleDrop(e){
+  e.preventDefault();
+  document.getElementById('note-img-drop').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if(file && file.type.startsWith('image/')) noteLoadImageFile(file);
+}
+
+function noteHandleImage(e){
+  const file = e.target.files[0];
+  if(file) noteLoadImageFile(file);
+}
+
+function noteLoadImageFile(file){
+  _noteImgMime = file.type;
+  const reader = new FileReader();
+  reader.onload = function(ev){
+    const dataUrl = ev.target.result;
+    _noteImgBase64 = dataUrl.split(',')[1];
+    const preview = document.getElementById('note-img-preview');
+    preview.src = dataUrl;
+    preview.style.display = 'block';
+    document.getElementById('note-transcribe-btn').style.display = 'block';
+    document.getElementById('note-img-status').textContent = 'Imagen lista. Presiona el botón para transcribir.';
+  };
+  reader.readAsDataURL(file);
+}
+
+async function noteTranscribeImage(){
+  if(!_noteImgBase64){ alert('Primero sube una imagen.'); return; }
+  if(!_apiKey){ openApiKeyModal(); return; }
+
+  const btn = document.getElementById('note-transcribe-btn');
+  const status = document.getElementById('note-img-status');
+  btn.disabled = true;
+  btn.textContent = '⏳ Transcribiendo...';
+  status.textContent = 'La IA está leyendo tu imagen...';
+
+  try{
+    const imgUrl = 'https://api.groq.com/openai/v1/chat/completions';
+    const res = await fetch(imgUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + _apiKey
+      },
+      body: JSON.stringify({
+        model: 'meta-llama/llama-4-scout-17b-16e-instruct',
+        max_tokens: 2000,
+        temperature: 0.2,
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Eres un asistente de estudio. Transcribe EXACTAMENTE el contenido de esta imagen de apuntes. Conserva la estructura, titulos, listas y formulas. Si hay esquemas o diagramas, descríbelos brevemente. Responde SOLO con el texto transcrito, sin comentarios adicionales. Usa formato limpio y legible.' },
+            { type: 'image_url', image_url: { url: 'data:' + _noteImgMime + ';base64,' + _noteImgBase64 } }
+          ]
+        }]
+      })
+    });
+
+    if(!res.ok){
+      if(res.status===401){ _apiKey=''; openApiKeyModal(); }
+      throw new Error('Error ' + res.status);
+    }
+
+    const data = await res.json();
+    const transcribed = data.choices?.[0]?.message?.content || '';
+
+    if(!transcribed){ throw new Error('No se pudo transcribir la imagen'); }
+
+    // Append to note body
+    const body = document.getElementById('note-body');
+    const separator = body.value.trim() ? '\n\n---\n\n' : '';
+    body.value = body.value + separator + transcribed;
+
+    // Auto-set title if empty
+    const titleInput = document.getElementById('note-title-input');
+    if(!titleInput.value.trim() || titleInput.value === 'Nueva nota'){
+      titleInput.value = 'Apunte ' + new Date().toLocaleDateString('es-MX');
+    }
+
+    // Switch to write tab to show result
+    noteTabSwitch('write');
+    btn.textContent = '⏳ Guardando...';
+
+    // Auto-save to Supabase immediately
+    if(noteSelected){
+      noteSelected.titulo = titleInput.value;
+      noteSelected.contenido = body.value;
+      const idx = notes.findIndex(n => n.id === noteSelected.id);
+      if(idx >= 0) notes[idx] = {...noteSelected};
+
+      if(noteSelected.id && String(noteSelected.id).length > 10){
+        await dbUpdate('apuntes', noteSelected.id, {
+          titulo: noteSelected.titulo,
+          contenido: noteSelected.contenido,
+          color: noteSelected.color,
+          folder_id: noteSelected.folder_id || null
+        });
+      } else {
+        const saved = await dbInsert('apuntes', {
+          titulo: noteSelected.titulo,
+          contenido: noteSelected.contenido,
+          color: noteSelected.color,
+          fecha: noteSelected.fecha,
+          folder_id: noteSelected.folder_id || null
+        });
+        if(saved && saved[0] && idx >= 0){
+          notes[idx].id = saved[0].id;
+          noteSelected.id = saved[0].id;
+        }
+      }
+    }
+
+    status.textContent = '';
+    btn.textContent = '✨ Transcribir con IA y guardar en apunte';
+    btn.disabled = false;
+
+    // Reset image state
+    _noteImgBase64 = '';
+    _noteImgMime = '';
+    document.getElementById('note-img-preview').style.display = 'none';
+    document.getElementById('note-transcribe-btn').style.display = 'none';
+    document.getElementById('note-img-input').value = '';
+
+    renderNotesList();
+    status.textContent = '✅ ¡Transcripción guardada!';
+    setTimeout(()=>{ document.getElementById('note-img-status').textContent=''; }, 3000);
+
+  } catch(e){
+    btn.disabled = false;
+    btn.textContent = '✨ Transcribir con IA y guardar en apunte';
+    status.textContent = '❌ Error: ' + e.message;
+  }
+}
+
 </script>
 
 <!-- ══════════════ AUTH OVERLAY ══════════════ -->
@@ -3033,15 +3428,33 @@ pomoUpdate = function(){
 <!-- API Key Modal -->
 <div id="apikey-modal">
   <div class="apikey-box">
-    <h2>🔑 Ingresa tu API Key de Gemini</h2>
-    <p>Para usar las funciones de IA necesitas una API Key de Google Gemini. Es <strong>gratis</strong>, se obtiene en segundos y se guarda solo en tu sesión.</p>
+    <h2>🔑 Ingresa tu API Key de Groq</h2>
+    <p>Para usar las funciones de IA necesitas una API Key de Groq. Es <strong>100% gratis</strong>, se obtiene en segundos y se guarda solo en tu sesión.</p>
     <div class="auth-field">
       <label>API Key de Google Gemini</label>
-      <input type="password" id="apikey-input" placeholder="AIza..." onkeydown="if(event.key==='Enter')saveApiKey()"/>
+      <input type="password" id="apikey-input" placeholder="gsk_..." onkeydown="if(event.key==='Enter')saveApiKey()"/>
     </div>
     <button class="auth-btn" onclick="saveApiKey()">Guardar y continuar</button>
     <button class="auth-btn" onclick="closeApiKeyModal()" style="background:var(--card);color:var(--muted);margin-top:8px;">Ahora no</button>
-    <p class="apikey-note">Obtén tu API Key gratis en <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a></p>
+    <p class="apikey-note">Obtén tu API Key gratis en <a href="https://console.groq.com/keys" target="_blank">console.groq.com/keys</a></p>
+  </div>
+</div>
+
+
+<!-- Folder Modal -->
+<div id="folder-modal">
+  <div class="folder-modal-box">
+    <h3>📁 Nueva carpeta</h3>
+    <div class="auth-field">
+      <label>Nombre de la carpeta</label>
+      <input type="text" id="folder-name-input" placeholder="ej. Matemáticas, Proyecto IA..." maxlength="40" onkeydown="if(event.key==='Enter')saveFolderModal()"/>
+    </div>
+    <div style="margin-bottom:14px;">
+      <label style="font-size:12px;font-weight:700;color:var(--muted);display:block;margin-bottom:8px;">Color</label>
+      <div id="folder-color-picker" style="display:flex;gap:8px;flex-wrap:wrap;"></div>
+    </div>
+    <button class="auth-btn" onclick="saveFolderModal()">Crear carpeta</button>
+    <button class="auth-btn" onclick="closeFolderModal()" style="background:var(--card);color:var(--muted);margin-top:8px;">Cancelar</button>
   </div>
 </div>
 
