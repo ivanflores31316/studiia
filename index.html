@@ -1532,7 +1532,7 @@ async function aigenGenerate(){
     const prompt=`Eres un profesor experto en "${materia}". Con base en estos apuntes del estudiante, genera exactamente ${count} flashcards distribuidas en ${days} días de estudio (${perDay} por día aproximadamente).
 
 APUNTES DEL ESTUDIANTE:
-${content.substring(0,3000)}
+${content.substring(0,2000)}
 
 Genera flashcards que cubran los conceptos más importantes de los apuntes. Distribuye las más fáciles en el día 1 y las más complejas en días posteriores.
 
@@ -1544,7 +1544,7 @@ Responde SOLO con JSON válido sin markdown:
 - dia: número de 1 a ${days}.
 - Total: exactamente ${count} flashcards.`;
     const res=await callAI(prompt);
-    const parsed=JSON.parse(res);
+    const parsed=safeParseJSON(res);
     const newCards=parsed.flashcards||[];
     // Save to DB and local
     for(const c of newCards){
@@ -1592,7 +1592,7 @@ async function generateAndStartExam(){
     const prompt=`Eres un profesor experto en "${materia}". Genera un examen de simulación de exactamente ${numPreguntas} preguntas de opción múltiple basadas en este contenido.
 
 CONTENIDO / APUNTES:
-${contenido.substring(0,4000)}
+${contenido.substring(0,2000)}
 
 Responde SOLO con JSON válido sin markdown:
 {"preguntas":[{"pregunta":"...","opciones":["A)...","B)...","C)...","D)..."],"correcta":0,"tema":"...","explicacion":"..."}]}
@@ -1604,7 +1604,7 @@ Responde SOLO con JSON válido sin markdown:
 - dificultad general: ${dificultad}.
 - EXACTAMENTE ${numPreguntas} preguntas, variadas, que cubran diferentes temas.`;
     const res=await callAI(prompt);
-    const parsed=JSON.parse(res);
+    const parsed=safeParseJSON(res);
     QUIZ=parsed.preguntas||[];
     clearInterval(li);
     btn.style.display='block'; loader.style.display='none';
@@ -1653,26 +1653,42 @@ function renderExQuestion(){
   document.getElementById('ex-question').textContent=q.pregunta;
   const cont=document.getElementById('ex-options');
   cont.innerHTML='';
+  const selected=exAnswers[exIdx]; // previously selected answer (may be undefined)
   (q.opciones||[]).forEach((op,i)=>{
     const div=document.createElement('div');
-    div.style.cssText='padding:14px 18px;border-radius:13px;border:2px solid var(--border);background:var(--card);cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s;font-size:14px;';
-    div.innerHTML=`<div style="width:26px;height:26px;border-radius:50%;background:rgba(38,42,69,.88);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;">${String.fromCharCode(65+i)}</div>${op}`;
-    div.onclick=()=>exSelect(i,div);
+    const isSelected=(selected===i);
+    div.style.cssText='padding:14px 18px;border-radius:13px;border:2px solid '+(isSelected?'var(--accent)':'var(--border)')+';background:'+(isSelected?'rgba(108,99,255,.15)':'var(--card)')+';cursor:pointer;display:flex;align-items:center;gap:12px;transition:all .2s;font-size:14px;'+(isSelected?'font-weight:700;':'');
+    div.innerHTML=`<div style="width:26px;height:26px;border-radius:50%;background:${isSelected?'var(--accent)':'rgba(38,42,69,.88)'};display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;color:#fff;">${String.fromCharCode(65+i)}</div>${op}`;
+    div.onclick=()=>exSelect(i);
     cont.appendChild(div);
   });
   const nb=document.getElementById('ex-next-btn');
-  nb.disabled=true;nb.style.opacity='.5';
+  const hasAnswer=selected!==undefined;
+  nb.disabled=!hasAnswer;nb.style.opacity=hasAnswer?'1':'.5';
   nb.textContent=exIdx<QUIZ.length-1?'Siguiente →':'Terminar Examen';
 }
 
-function exSelect(i,el){
-  if(exAnswers[exIdx]!==undefined)return;
-  exAnswers[exIdx]=i;
-  document.querySelectorAll('#ex-options>div').forEach((d,idx)=>{
-    if(idx===i){d.style.border='2px solid var(--accent)';d.style.background='rgba(108,99,255,.15)';d.style.fontWeight='700';}
+function exSelect(i){
+  // Toggle: click same option = deselect, click different = switch
+  if(exAnswers[exIdx]===i){
+    delete exAnswers[exIdx]; // deselect
+  } else {
+    exAnswers[exIdx]=i; // select or change
+  }
+  // Re-render options to reflect new state
+  const cont=document.getElementById('ex-options');
+  const selected=exAnswers[exIdx];
+  cont.querySelectorAll('div').forEach((d,idx)=>{
+    const isSel=(selected===idx);
+    d.style.border='2px solid '+(isSel?'var(--accent)':'var(--border)');
+    d.style.background=isSel?'rgba(108,99,255,.15)':'var(--card)';
+    d.style.fontWeight=isSel?'700':'400';
+    const circle=d.querySelector('div');
+    if(circle) circle.style.background=isSel?'var(--accent)':'rgba(38,42,69,.88)';
   });
   const nb=document.getElementById('ex-next-btn');
-  nb.disabled=false;nb.style.opacity='1';
+  const hasAnswer=selected!==undefined;
+  nb.disabled=!hasAnswer;nb.style.opacity=hasAnswer?'1':'.5';
 }
 
 function exNext(){
@@ -2293,10 +2309,10 @@ Responde SOLO con JSON válido sin markdown:
     clearInterval(interval);
 
     // Parse results
-    try{extAIFlashcards=JSON.parse(flashRes).flashcards||[];}catch(e){extAIFlashcards=makeFallbackCards(topicsStr);}
-    try{extAIExamen=JSON.parse(examRes).preguntas||[];}catch(e){extAIExamen=makeFallbackExam(topicsStr);}
-    try{extAIEjercicios=JSON.parse(ejRes).ejercicios||[];}catch(e){extAIEjercicios=makeFallbackEj(topicsStr);}
-    try{extAIResumen=JSON.parse(resumenRes).resumen||null;}catch(e){extAIResumen=null;}
+    try{extAIFlashcards=safeParseJSON(flashRes).flashcards||[];}catch(e){extAIFlashcards=makeFallbackCards(topicsStr);}
+    try{extAIExamen=safeParseJSON(examRes).preguntas||[];}catch(e){extAIExamen=makeFallbackExam(topicsStr);}
+    try{extAIEjercicios=safeParseJSON(ejRes).ejercicios||[];}catch(e){extAIEjercicios=makeFallbackEj(topicsStr);}
+    try{extAIResumen=safeParseJSON(resumenRes).resumen||null;}catch(e){extAIResumen=null;}
 
     // Build study plan
     extPlanData=buildExtPlan(materia,diasTotal,horasDia,extTopics,nivel,exDate);
@@ -2357,7 +2373,7 @@ async function callAI(prompt){
     },
     body: JSON.stringify({
       model: 'llama-3.3-70b-versatile',
-      max_tokens: 1500,
+      max_tokens: 4000,
       temperature: 0.7,
       messages: [{ role: 'user', content: prompt }]
     })
@@ -3363,6 +3379,42 @@ async function noteTranscribeImage(){
     btn.textContent = '✨ Transcribir con IA y guardar en apunte';
     status.textContent = '❌ Error: ' + e.message;
   }
+}
+
+
+/* ═══════════════════════════════
+   SAFE JSON PARSER — handles truncated responses
+═══════════════════════════════ */
+function safeParseJSON(text){
+  // Strip markdown fences
+  text = text.replace(/```json\s*/gi,'').replace(/```\s*/gi,'').trim();
+  // Try direct parse first
+  try{ return JSON.parse(text); } catch(e){}
+  // Try to find the JSON object/array
+  const firstBrace = text.indexOf('{');
+  const firstBracket = text.indexOf('[');
+  let start = -1;
+  if(firstBrace>=0 && (firstBracket<0 || firstBrace<firstBracket)) start=firstBrace;
+  else if(firstBracket>=0) start=firstBracket;
+  if(start<0) throw new Error('No JSON found in response');
+  text = text.slice(start);
+  // Try again after slicing
+  try{ return JSON.parse(text); } catch(e){}
+  // Attempt to repair truncated JSON by closing open structures
+  let repaired = text;
+  // Remove trailing incomplete object (last incomplete {...) 
+  // Find last complete item by scanning for the last valid closing
+  const lastFullItem = repaired.lastIndexOf('},');
+  if(lastFullItem > 0){
+    repaired = repaired.slice(0, lastFullItem+1);
+    // Close the array and object
+    const openBraces = (repaired.match(/{/g)||[]).length - (repaired.match(/}/g)||[]).length;
+    const openBrackets = (repaired.match(/\[/g)||[]).length - (repaired.match(/\]/g)||[]).length;
+    for(let i=0;i<openBraces;i++) repaired += '}';
+    for(let i=0;i<openBrackets;i++) repaired += ']';
+    try{ return JSON.parse(repaired); } catch(e){}
+  }
+  throw new Error('JSON truncado — respuesta incompleta del modelo');
 }
 
 </script>
